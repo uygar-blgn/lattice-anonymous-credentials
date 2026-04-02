@@ -7,6 +7,10 @@ static nmod_poly_t POLY_F_REV_INV;
 static poly_q TMP;
 static poly_q AUX;
 
+static nmod_poly_t POLY_F_MOD_BH;
+static nmod_poly_t TMP_MOD_BH;
+static nmod_poly_t AUX_MOD_BH;
+
 /*************************************************
 * Name:        nmod_poly_invert
 *
@@ -44,6 +48,12 @@ void arith_q_setup(void) {
   nmod_poly_set_coeff_ui(POLY_F, 0, 1);
   nmod_poly_set_coeff_ui(POLY_F, PARAM_N, 1);
 
+  nmod_poly_init(POLY_F_MOD_BH, PARAM_BH);
+  nmod_poly_init(TMP_MOD_BH, PARAM_BH);
+  nmod_poly_init(AUX_MOD_BH, PARAM_BH);
+  nmod_poly_set_coeff_ui(POLY_F_MOD_BH, 0, 1);
+  nmod_poly_set_coeff_ui(POLY_F_MOD_BH, PARAM_N, 1);
+
   nmod_poly_t f_len;
   nmod_poly_init(f_len, PARAM_Q);
   nmod_poly_set_coeff_ui(f_len, PARAM_N + 1, 1);
@@ -76,6 +86,10 @@ void arith_q_teardown(void) {
 
   nmod_poly_clear(POLY_F);
   nmod_poly_clear(POLY_F_REV_INV);
+
+  nmod_poly_clear(POLY_F_MOD_BH);
+  nmod_poly_clear(TMP_MOD_BH);
+  nmod_poly_clear(AUX_MOD_BH);
 }
 
 /*************************************************
@@ -387,6 +401,168 @@ int64_t poly_q_weight(const poly_q arg) {
   	weight += tmp;
   }
   return weight;
+}
+
+/*************************************************
+* Name:        poly_q_mod_bL
+*
+* Description: Reduction of the polynomial modulo PARAM_BL
+*
+* Arguments:   - poly_q res: polynomial to hold the modular reduction (initialized)
+*              - const poly_q arg: polynomial to be reduced
+**************************************************/
+void poly_q_mod_bL(poly_q res, const poly_q arg) {
+  for (size_t j = 0; j < PARAM_N; ++j) {
+    coeff_q c = poly_q_get_coeff(arg, j);
+    c %= PARAM_BL;
+    c += (c >> (sizeof(coeff_q)*8-1)) & PARAM_BL;
+    ASSERT_DEBUG(c >= 0, "Don't give me too much negativity!");
+    nmod_poly_set_coeff_ui(res, j, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_mod_bH
+*
+* Description: Reduction of the polynomial modulo PARAM_BH
+*
+* Arguments:   - poly_q res: polynomial to hold the modular reduction (initialized)
+*              - const poly_q arg: polynomial to be reduced
+**************************************************/
+void poly_q_mod_bH(poly_q res, const poly_q arg) {
+  for (size_t j = 0; j < PARAM_N; ++j) {
+    coeff_q c = poly_q_get_coeff(arg, j);
+    c %= PARAM_BH;
+    c += (c >> (sizeof(coeff_q)*8-1)) & PARAM_BH;
+    ASSERT_DEBUG(c >= 0, "Don't give me too much negativity!");
+    nmod_poly_set_coeff_ui(res, j, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_sample_gaussian_s4
+*
+* Description: Sample a polynomial from the centered spherical Gaussian
+*              with width PARAM_S4
+*
+* Arguments:   - poly_q res: the polynomial to host the Gaussian sample (initialized)
+**************************************************/
+void poly_q_sample_gaussian_s4(poly_q res) {
+  coeff_q ci;
+  size_t i;
+  for (i = 0; i < PARAM_N; i++) {
+    ci = SampleZ(0, PARAM_S4);
+    poly_q_set_coeff(res, i, ci);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_gaussian_coset_sL
+*
+* Description: Sample a polynomial from the discrete Gaussian
+*              over PARAM_BL * Ring + arg, with width s_L
+*
+* Arguments:   - poly_q res: the polynomial to host the Gaussian sample (initialized)
+*              - const poly_q arg: center polynomial
+**************************************************/
+void poly_q_gaussian_coset_sL(poly_q res, const poly_q arg) {
+  coeff_q c,z;
+  double neg_c_div_bL;
+  for (size_t i = 0; i < PARAM_N; i++) {
+    c = poly_q_get_coeff(arg, i);
+    neg_c_div_bL = - ((double)c) / PARAM_BL;
+    z = SampleZ(neg_c_div_bL, PARAM_SL_DIV_BL);
+    c += (PARAM_BL * z);
+    poly_q_set_coeff(res, i, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_gaussian_coset_sH
+*
+* Description: Sample a polynomial from the discrete Gaussian
+*              over PARAM_BH * Ring + arg, with width s_H
+*
+* Arguments:   - poly_q res: the polynomial to host the Gaussian sample (initialized)
+*              - const poly_q arg: center polynomial
+**************************************************/
+void poly_q_gaussian_coset_sH(poly_q res, const poly_q arg) {
+  coeff_q c,z;
+  double neg_c_div_bH;
+  for (size_t i = 0; i < PARAM_N; i++) {
+    c = poly_q_get_coeff(arg, i);
+    neg_c_div_bH = - ((double)c) / PARAM_BH;
+    z = SampleZ(neg_c_div_bH, PARAM_SH_DIV_BH);
+    c += (PARAM_BH * z);
+    poly_q_set_coeff(res, i, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_div_bL
+*
+* Description: Divides a polynomial by PARAM_BL
+*
+* Arguments:   - poly_q res: the polynomial to host the division (initialized)
+*              - const poly_q arg: polynomial to divide
+**************************************************/
+void poly_q_div_bL(poly_q res, const poly_q arg) {
+  coeff_q c;
+  for (size_t i = 0; i < PARAM_N; i++) {
+    c = poly_q_get_coeff(arg, i);
+    c /= PARAM_BL;
+    poly_q_set_coeff(res, i, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_div_bH
+*
+* Description: Divides a polynomial by PARAM_BH
+*
+* Arguments:   - poly_q res: the polynomial to host the division (initialized)
+*              - const poly_q arg: polynomial to divide
+**************************************************/
+void poly_q_div_bH(poly_q res, const poly_q arg) {
+  coeff_q c;
+  for (size_t i = 0; i < PARAM_N; i++) {
+    c = poly_q_get_coeff(arg, i);
+    c /= PARAM_BH;
+    poly_q_set_coeff(res, i, c);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_invert_mod_bH
+*
+* Description: Compute the inverse of a polynomial in Z[x]/(b_H, x^n+1)
+*
+* Arguments:   - poly_q res: polynomial to host the inverse mod PARAM_BH
+*              - const poly_q arg: polynomial to invert
+**************************************************/
+void poly_q_invert_mod_bH(poly_q res, const poly_q arg) {
+  nmod_poly_t arg_bH, res_bH;
+  nmod_poly_init(arg_bH, PARAM_BH);
+  nmod_poly_init(res_bH, PARAM_BH);
+  coeff_q c;
+  // convert arg to be modulo PARAM_BH
+  for (size_t j = 0; j < PARAM_N; j++) {
+    c = poly_q_get_coeff(arg,j);
+    c %= PARAM_BH;
+    c += (c >> (sizeof(coeff_q)*8-1)) & PARAM_BH;
+    ASSERT_DEBUG(c >= 0, "Don't give me too much negativity!");
+    nmod_poly_set_coeff_ui(arg_bH, j, c);
+  }
+  // compute inverse in res_bH
+  nmod_poly_xgcd(TMP_MOD_BH, AUX_MOD_BH, res_bH, POLY_F_MOD_BH, arg_bH);
+  ASSERT_DEBUG(nmod_poly_is_one(TMP_MOD_BH), "Polynomial inversion did not work correctly.");
+  // convert res_bH to res
+  for (size_t j = 0; j < PARAM_N; j++) {
+    c = nmod_poly_get_coeff_ui(res_bH, j);
+    poly_q_set_coeff(res,j,c);
+  }
+  nmod_poly_clear(arg_bH);
+  nmod_poly_clear(res_bH);
 }
 
 /*************************************************

@@ -227,20 +227,40 @@ uint64_t poly_q_vec_d_norm2(const poly_q_vec_d arg) {
 }
 
 /*************************************************
-* Name:        poly_q_vec_d_gaussian_sqrt_s2sq_sGsq
+* Name:        poly_q_vec_d_gaussian_sqrt_s2sq_sLsq
 *
 * Description: Sample a polynomial vector with PARAM_D entries
-* 			   		 from the centered spherical Gaussian with parameter
-* 			   		 PARAM_SQRT_S2SQ_SGSQ = sqrt(s_2^2 - s_G^2)
-* 
+*              from the centered spherical Gaussian with parameter
+*              PARAM_SQRT_S2SQ_SLSQ = sqrt(s_2^2 - s_L^2)
+*
 * Arguments:   - poly_q_vec_d res: the polynomial to host the Gaussian sample
 **************************************************/
-void poly_q_vec_d_gaussian_sqrt_s2sq_sGsq(poly_q_vec_d res) {
+void poly_q_vec_d_gaussian_sqrt_s2sq_sLsq(poly_q_vec_d res) {
 	coeff_q cj;
   size_t i,j;
   for (i = 0; i < PARAM_D; i++) {
   	for (j = 0; j < PARAM_N; j++) {
-  		cj = SampleZ(0, PARAM_SQRT_S2SQ_SGSQ);
+  		cj = SampleZ(0, PARAM_SQRT_S2SQ_SLSQ);
+  		poly_q_set_coeff(res->entries[i], j, cj);
+  	}
+  }
+}
+
+/*************************************************
+* Name:        poly_q_vec_d_gaussian_sqrt_s4sq_sHsq
+*
+* Description: Sample a polynomial vector with PARAM_D entries
+*              from the centered spherical Gaussian with parameter
+*              PARAM_SQRT_S4SQ_SHSQ = sqrt(s_4^2 - s_H^2)
+*
+* Arguments:   - poly_q_vec_d res: the polynomial to host the Gaussian sample
+**************************************************/
+void poly_q_vec_d_gaussian_sqrt_s4sq_sHsq(poly_q_vec_d res) {
+	coeff_q cj;
+  size_t i,j;
+  for (i = 0; i < PARAM_D; i++) {
+  	for (j = 0; j < PARAM_N; j++) {
+  		cj = SampleZ(0, PARAM_SQRT_S4SQ_SHSQ);
   		poly_q_set_coeff(res->entries[i], j, cj);
   	}
   }

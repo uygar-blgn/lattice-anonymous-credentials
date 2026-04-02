@@ -23,6 +23,8 @@ void poly_q_clear(poly_q arg);
 void poly_q_zero(poly_q res);
 void poly_q_set(poly_q res, const poly_q arg);
 coeff_q poly_q_get_coeff(const poly_q arg, size_t n);
+void poly_q_mod_bL(poly_q res, const poly_q arg);
+void poly_q_mod_bH(poly_q res, const poly_q arg);
 coeff_q poly_q_get_coeff_centered(const poly_q arg, size_t n);
 void poly_q_set_coeff(poly_q arg, size_t n, coeff_q c);
 void poly_q_from_bits(poly_q arg, const uint8_t coeffs[PARAM_N / 8]);
@@ -38,6 +40,12 @@ int poly_q_equal(const poly_q lhs, const poly_q rhs);
 void poly_q_dump(const poly_q arg);
 uint64_t poly_q_sq_norm2(const poly_q arg);
 int64_t poly_q_weight(const poly_q arg);
+void poly_q_sample_gaussian_s4(poly_q res);
+void poly_q_gaussian_coset_sL(poly_q res, const poly_q arg);
+void poly_q_gaussian_coset_sH(poly_q res, const poly_q arg);
+void poly_q_div_bL(poly_q res, const poly_q arg);
+void poly_q_div_bH(poly_q res, const poly_q arg);
+void poly_q_invert_mod_bH(poly_q res, const poly_q arg);
 void poly_q_invert(poly_q res, const poly_q arg);
 
 #endif /* POLY_Q_H */

@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 add_executable(test)
+add_executable(test_sep)
 add_executable(bench)
 
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
@@ -76,6 +77,33 @@ set(SOURCES_LAC
   "${SRC_DIR}/show_prove.c"
   "${SRC_DIR}/show_proof_verify.c")
 
+set(SOURCES_SEP
+  "${SRC_DIR}/arith/arith_sep.c"
+  "${SRC_DIR}/arith/arith_q/poly_q.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_d.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_k.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_m.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_d.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_k.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_m.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_sampling.c"
+  "${SRC_DIR}/arith/arith_real/poly_real.c"
+  "${SRC_DIR}/arith/arith_real/poly_real_vec_2d.c"
+  "${SRC_DIR}/arith/arith_real/poly_real_mat_2d_2d.c"
+  "${SRC_DIR}/arith/arith_z/poly_z.c"
+  "${SRC_DIR}/arith/arith_z/poly_z_vec_d.c"
+  "${SRC_DIR}/arith/arith_z/poly_z_mat_d_d.c"
+  "${SRC_DIR}/covariance.c"
+  "${SRC_DIR}/fips202.c"
+  "${SRC_DIR}/random.c"
+  "${SRC_DIR}/randombytes.c"
+  "${SRC_DIR}/sampling.c"
+  "${SRC_DIR}/sep.c")
+
+target_sources(test_sep PUBLIC
+  "${TEST_DIR}/sep_test.c"
+  "${SOURCES_SEP}")
+
 target_sources(test PUBLIC
   "${TEST_DIR}/main.c"
   "${SOURCES_LAC}")
@@ -89,6 +117,7 @@ target_sources(bench PUBLIC
   "${SOURCES_LAC}")
 
 target_include_directories(test PUBLIC ${INCLUDE_DIR})
+target_include_directories(test_sep PUBLIC ${INCLUDE_DIR})
 target_include_directories(bench PUBLIC ${INCLUDE_DIR} ${BENCH_DIR})
 
 set(WARN_ERROR_FLAGS
@@ -115,12 +144,18 @@ set(BENCH_OPTS
 target_compile_options(test PUBLIC ${WARN_ERROR_FLAGS} ${TEST_OPTS} ${SANITIZER_FLAGS})
 target_link_options(test PUBLIC ${TEST_OPTS} ${SANITIZER_FLAGS})
 
+target_compile_options(test_sep PUBLIC ${WARN_ERROR_FLAGS} ${TEST_OPTS} ${SANITIZER_FLAGS})
+target_link_options(test_sep PUBLIC ${TEST_OPTS} ${SANITIZER_FLAGS})
+
 target_compile_definitions(bench PUBLIC REMOVE_ASSERTS=1)
 target_compile_options(bench PUBLIC ${WARN_ERROR_FLAGS} ${BENCH_OPTS})
 target_link_options(bench PUBLIC ${BENCH_OPTS})
 
 target_link_libraries(test PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
 target_link_libraries(test PUBLIC m)
+
+target_link_libraries(test_sep PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
+target_link_libraries(test_sep PUBLIC m)
 
 target_link_libraries(bench PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
 target_link_libraries(bench PUBLIC m)

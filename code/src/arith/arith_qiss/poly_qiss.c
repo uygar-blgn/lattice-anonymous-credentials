@@ -349,19 +349,18 @@ uint64_t poly_qiss_sq_norm2(const poly_qiss arg) {
 **************************************************/
 void poly_qiss_pack(uint8_t buf[POLYQISS_PACKEDBYTES], const poly_qiss arg) {
   uint64_t x;
+#if PARAM_Q_ISS_BITLEN > 56
+#error "poly_qiss_pack assumes that PARAM_Q_ISS_BITLEN <= 56"
+#endif
   for (size_t i = 0; i < PARAM_N_ISS; i++) {
-	  x = poly_qiss_get_coeff(arg, i);
-#if PARAM_Q_ISS_BITLEN > 40
-#error "poly_qiss_pack assumes that PARAM_Q_ISS_BITLEN <= 40"
-#endif
-#if PARAM_Q1_ISS_BITLEN > 20
-#error "poly_qiss_pack assumes that PARAM_Q1_ISS_BITLEN <= 20"
-#endif
-    buf[5*i + 0] = x >>  0;
-    buf[5*i + 1] = x >>  8;
-    buf[5*i + 2] = x >> 16;
-    buf[5*i + 3] = x >> 24;
-    buf[5*i + 4] = x >> 32;
+    x = poly_qiss_get_coeff(arg, i); // already in [0, PARAM_Q_ISS)
+    buf[7*i + 0] = (uint8_t)(x >>  0);
+    buf[7*i + 1] = (uint8_t)(x >>  8);
+    buf[7*i + 2] = (uint8_t)(x >> 16);
+    buf[7*i + 3] = (uint8_t)(x >> 24);
+    buf[7*i + 4] = (uint8_t)(x >> 32);
+    buf[7*i + 5] = (uint8_t)(x >> 40);
+    buf[7*i + 6] = (uint8_t)(x >> 48);
   }
 }
 
@@ -374,19 +373,13 @@ void poly_qiss_pack(uint8_t buf[POLYQISS_PACKEDBYTES], const poly_qiss arg) {
 *              - const coeff_qiss arg: the coefficient to be packed
 **************************************************/
 void coeff_qiss_pack(uint8_t buf[COEFFQISS_PACKEDBYTES], const coeff_qiss arg) {
-  uint64_t x;
-  coeff_qiss tmp = arg + ((arg >> (sizeof(coeff_qiss)*8-1)) & PARAM_Q_ISS);
-  x = tmp % PARAM_Q1_ISS; // first CRT slot on first 20 bits
-  x |= (tmp % PARAM_Q2_ISS) << 20; // second CRT slot on next 20 bits
-#if PARAM_Q_ISS_BITLEN > 40
-#error "poly_qiss_pack assumes that PARAM_Q_ISS_BITLEN <= 40"
-#endif
-#if PARAM_Q1_ISS_BITLEN > 20
-#error "poly_qiss_pack assumes that PARAM_Q1_ISS_BITLEN <= 20"
-#endif
-  buf[0] = x >>  0;
-  buf[1] = x >>  8;
-  buf[2] = x >> 16;
-  buf[3] = x >> 24;
-  buf[4] = x >> 32;
+  // Reduce signed arg to canonical range [0, PARAM_Q_ISS)
+  uint64_t x = (uint64_t)(arg + ((arg >> (sizeof(coeff_qiss)*8-1)) & (coeff_qiss)PARAM_Q_ISS));
+  buf[0] = (uint8_t)(x >>  0);
+  buf[1] = (uint8_t)(x >>  8);
+  buf[2] = (uint8_t)(x >> 16);
+  buf[3] = (uint8_t)(x >> 24);
+  buf[4] = (uint8_t)(x >> 32);
+  buf[5] = (uint8_t)(x >> 40);
+  buf[6] = (uint8_t)(x >> 48);
 }

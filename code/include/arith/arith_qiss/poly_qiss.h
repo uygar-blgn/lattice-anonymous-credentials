@@ -12,7 +12,7 @@
 
 #include "params.h"
 
-#define COEFFQISS_PACKEDBYTES 5
+#define COEFFQISS_PACKEDBYTES 7
 #define POLYQISS_PACKEDBYTES (PARAM_N_ISS * COEFFQISS_PACKEDBYTES)
 
 typedef nmod_poly_t poly_qiss;

@@ -14,7 +14,7 @@ static int sep_test(void)
   sep_sk_t sk;
   sep_pk_t pk;
   sep_sig_t sig;
-  uint8_t state[STATE_BYTES], msg[PARAM_M*PARAM_N/8];
+  uint8_t state[STATE_BYTES], msg[PARAM_M * PARAM_N / 8];
   randombytes(state, STATE_BYTES);
 
   printf("\nsep_test\n");
@@ -27,7 +27,7 @@ static int sep_test(void)
     sep_keygen(&pk, &sk);
     for (int j = 0; j < NSUBTESTS; j++)
     {
-      randombytes(msg, PARAM_M*PARAM_N/8);
+      randombytes(msg, PARAM_M * PARAM_N / 8);
       sep_sign(&sig, state, &sk, &pk, msg);
       if (!sep_verify(&sig, msg, &pk))
       {
@@ -47,7 +47,7 @@ static int sep_test(void)
     }
   }
 
-  sep_test_cleanup:
+sep_test_cleanup:
   sep_sig_clear(&sig);
   sep_keys_clear(&pk, &sk);
   return rval;
@@ -55,7 +55,7 @@ static int sep_test(void)
 
 static int osig_signing_test(void)
 {
-  int i,j,rval = 1;
+  int i, j, rval = 1;
   sep_sk_t sk;
   sep_pk_t pk;
   sep_sig_t sig;
@@ -63,7 +63,7 @@ static int osig_signing_test(void)
   user_pk_t upk;
   poly_q_vec_d r[2];
   poly_q_vec_d cmt;
-  uint8_t state[STATE_BYTES], msg[PARAM_M*PARAM_N/8];
+  uint8_t state[STATE_BYTES], msg[PARAM_M * PARAM_N / 8];
   randombytes(state, STATE_BYTES);
 
   printf("\nosig_signing_test\n");
@@ -82,7 +82,7 @@ static int osig_signing_test(void)
     osig_user_keygen(&upk, &usk, pk.seed);
     for (j = 0; j < NSUBTESTS; j++)
     {
-      randombytes(msg, PARAM_M*PARAM_N/8);
+      randombytes(msg, PARAM_M * PARAM_N / 8);
       osig_user_commit(r, cmt, msg, &upk);
       osig_signer_sign_commitment(&sig, state, &sk, &pk, cmt);
       osig_user_sig_complete(&sig, r);
@@ -116,7 +116,7 @@ osig_signing_test_cleanup:
 
 static int osig_proof_test(void)
 {
-  int i,j,rval = 1;
+  int i, j, rval = 1;
   sep_sk_t sk;
   sep_pk_t pk;
   user_sk_t usk;
@@ -125,9 +125,9 @@ static int osig_proof_test(void)
   poly_q_vec_d r[2];
   poly_q_vec_d cmt;
   coeff_qiss coeff;
-  poly_qiss_vec_k u[2*PARAM_D], s1[PARAM_M1_K_ISS];
-  poly_qiss_mat_k_k A_embed[PARAM_D][PARAM_D], D_embed[PARAM_D][PARAM_M], Ds_embed[PARAM_D][2*PARAM_D];
-  uint8_t state[STATE_BYTES], msg[PARAM_M*PARAM_N/8], crs_seed[CRS_SEED_BYTES];
+  poly_qiss_vec_k u[2 * PARAM_D], s1[PARAM_M1_K_ISS];
+  poly_qiss_mat_k_k A_embed[PARAM_D][PARAM_D], D_embed[PARAM_D][PARAM_M], Ds_embed[PARAM_D][2 * PARAM_D];
+  uint8_t state[STATE_BYTES], msg[PARAM_M * PARAM_N / 8], crs_seed[CRS_SEED_BYTES];
   randombytes(state, STATE_BYTES);
 
   printf("\nosig_proof_test\n");
@@ -139,7 +139,7 @@ static int osig_proof_test(void)
   poly_q_vec_d_init(r[0]);
   poly_q_vec_d_init(r[1]);
   poly_q_vec_d_init(cmt);
-  for (i = 0; i < 2*PARAM_D; i++)
+  for (i = 0; i < 2 * PARAM_D; i++)
   {
     poly_qiss_vec_k_init(u[i]);
   }
@@ -152,7 +152,7 @@ static int osig_proof_test(void)
     for (j = 0; j < PARAM_D; j++)
     {
       poly_qiss_mat_k_k_init(A_embed[i][j]);
-      poly_qiss_mat_k_k_init(Ds_embed[i][j + 0      ]);
+      poly_qiss_mat_k_k_init(Ds_embed[i][j + 0]);
       poly_qiss_mat_k_k_init(Ds_embed[i][j + PARAM_D]);
     }
     for (j = 0; j < PARAM_M; j++)
@@ -168,7 +168,7 @@ static int osig_proof_test(void)
     randombytes(crs_seed, CRS_SEED_BYTES);
     for (j = 0; j < NSUBTESTS; j++)
     {
-      randombytes(msg, PARAM_M*PARAM_N/8);
+      randombytes(msg, PARAM_M * PARAM_N / 8);
       osig_user_commit(r, cmt, msg, &upk);
       osig_user_embed(A_embed, Ds_embed, D_embed, u, s1, &upk, &usk, cmt, r, msg);
       osig_user_prove(&proof, A_embed, Ds_embed, D_embed, u, s1, crs_seed, upk.seed);
@@ -192,7 +192,7 @@ static int osig_proof_test(void)
   }
 
 osig_proof_test_cleanup:
-  for (i = 0; i < 2*PARAM_D; i++)
+  for (i = 0; i < 2 * PARAM_D; i++)
   {
     poly_qiss_vec_k_clear(u[i]);
   }
@@ -205,7 +205,7 @@ osig_proof_test_cleanup:
     for (j = 0; j < PARAM_D; j++)
     {
       poly_qiss_mat_k_k_clear(A_embed[i][j]);
-      poly_qiss_mat_k_k_clear(Ds_embed[i][j + 0      ]);
+      poly_qiss_mat_k_k_clear(Ds_embed[i][j + 0]);
       poly_qiss_mat_k_k_clear(Ds_embed[i][j + PARAM_D]);
     }
     for (j = 0; j < PARAM_M; j++)
@@ -224,7 +224,7 @@ osig_proof_test_cleanup:
 
 static int show_proof_test(void)
 {
-  int i,j,rval = 1;
+  int i, j, rval = 1;
   sep_sk_t sk;
   sep_pk_t pk;
   user_sk_t usk;
@@ -236,9 +236,9 @@ static int show_proof_test(void)
   coeff_qshow coeff;
   poly_qshow_vec_m1 s1;
   poly_qshow_vec_k u_embed[PARAM_D];
-  poly_qshow_mat_k_k A_embed[PARAM_D][PARAM_D], B_embed[PARAM_D][PARAM_D*PARAM_K], A3_embed[PARAM_D][PARAM_K];
-  poly_qshow_mat_k_k D_embed[PARAM_D][PARAM_M], Ds_embed[PARAM_D][2*PARAM_D];
-  uint8_t state[STATE_BYTES], msg[PARAM_M*PARAM_N/8], crs_seed[CRS_SEED_BYTES];
+  poly_qshow_mat_k_k A_embed[PARAM_D][PARAM_D], B_embed[PARAM_D][PARAM_D * PARAM_KH], A3_embed[PARAM_D][1];
+  poly_qshow_mat_k_k D_embed[PARAM_D][PARAM_M], Ds_embed[PARAM_D][2 * PARAM_D];
+  uint8_t state[STATE_BYTES], msg[PARAM_M * PARAM_N / 8], crs_seed[CRS_SEED_BYTES];
   randombytes(state, STATE_BYTES);
 
   printf("\nshow_proof_test\n");
@@ -258,14 +258,14 @@ static int show_proof_test(void)
     for (j = 0; j < PARAM_D; j++)
     {
       poly_qshow_mat_k_k_init(A_embed[i][j]);
-      poly_qshow_mat_k_k_init(Ds_embed[i][j + 0      ]);
+      poly_qshow_mat_k_k_init(Ds_embed[i][j + 0]);
       poly_qshow_mat_k_k_init(Ds_embed[i][j + PARAM_D]);
     }
-    for (j = 0; j < PARAM_D*PARAM_K; j++)
+    for (j = 0; j < PARAM_D * PARAM_KH; j++)
     {
       poly_qshow_mat_k_k_init(B_embed[i][j]);
     }
-    for (j = 0; j < PARAM_K; j++)
+    for (j = 0; j < 1; j++)
     {
       poly_qshow_mat_k_k_init(A3_embed[i][j]);
     }
@@ -282,7 +282,7 @@ static int show_proof_test(void)
     randombytes(crs_seed, CRS_SEED_BYTES);
     for (j = 0; j < NSUBTESTS; j++)
     {
-      randombytes(msg, PARAM_M*PARAM_N/8);
+      randombytes(msg, PARAM_M * PARAM_N / 8);
       osig_user_commit(r, cmt, msg, &upk);
       osig_signer_sign_commitment(&sig, state, &sk, &pk, cmt);
       osig_user_sig_complete(&sig, r);
@@ -328,14 +328,14 @@ show_proof_test_cleanup:
     for (j = 0; j < PARAM_D; j++)
     {
       poly_qshow_mat_k_k_clear(A_embed[i][j]);
-      poly_qshow_mat_k_k_clear(Ds_embed[i][j + 0      ]);
+      poly_qshow_mat_k_k_clear(Ds_embed[i][j + 0]);
       poly_qshow_mat_k_k_clear(Ds_embed[i][j + PARAM_D]);
     }
-    for (j = 0; j < PARAM_D*PARAM_K; j++)
+    for (j = 0; j < PARAM_D * PARAM_KH; j++)
     {
       poly_qshow_mat_k_k_clear(B_embed[i][j]);
     }
-    for (j = 0; j < PARAM_K; j++)
+    for (j = 0; j < 1; j++)
     {
       poly_qshow_mat_k_k_clear(A3_embed[i][j]);
     }
@@ -347,7 +347,8 @@ show_proof_test_cleanup:
   return rval;
 }
 
-int main(void) {
+int main(void)
+{
   int pass = 1;
   arith_setup();
   random_init();
@@ -364,7 +365,9 @@ int main(void) {
     {
       printf("FAILED!\n");
       break;
-    } else {
+    }
+    else
+    {
       printf(".");
     }
   }

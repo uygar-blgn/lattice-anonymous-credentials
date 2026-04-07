@@ -2,8 +2,8 @@
 #define PARAMS_H
 
 /*************************************************
-* Domain separators for XOF expansion
-**************************************************/
+ * Domain separators for XOF expansion
+ **************************************************/
 // sep
 #define DOMAIN_SEPARATOR_A 0
 #define DOMAIN_SEPARATOR_R 1
@@ -37,8 +37,8 @@
 #define DOMAIN_SEPARATOR_RAND_G_SHOW 27
 
 /*************************************************
-* Signature parameters
-**************************************************/
+ * Signature parameters
+ **************************************************/
 // Ring degree for the signature
 #define PARAM_N 256
 // Modulus for the signature (q = q_L * q_H = 2401 * 169)
@@ -107,8 +107,8 @@
 #define STATE_BYTES 64
 
 /*************************************************
-* [ISSUANCE] Zero-Knowledge proof parameters
-**************************************************/
+ * [ISSUANCE] Zero-Knowledge proof parameters
+ **************************************************/
 // Ring degree for the issuance proof
 #define PARAM_N_ISS 64
 // Ring degree gap between the issuance proof and the signature (subring embedding)
@@ -128,21 +128,21 @@
 // Inverse of q_2 modulo q_1
 #define PARAM_Q2_INVMOD_Q1_ISS 101223L
 // Module rank for the issuance proof
-#define PARAM_D_ISS 20
+#define PARAM_D_ISS 16
 // Witness dimension
-#define PARAM_M1_ISS 104
+#define PARAM_M1_ISS 105
 // Scaled witness dimension (m_1 / k_hat)
 #define PARAM_M1_K_ISS 26
 // ABDLOP commitment randomness dimension
-#define PARAM_M2_ISS 58
+#define PARAM_M2_ISS 56
 // Soundness amplification dimension
-#define PARAM_L_ISS 7
+#define PARAM_L_ISS 2
 // Dimension for Approximate Range Proof
 #define PARAM_ARP_ISS 256
 // Rank for Approximate Range Proof (256 / n)
 #define PARAM_ARP_DIV_N_ISS 4
 // 256 / n + l
-#define PARAM_ARP_DIV_N_L_ISS 11
+#define PARAM_ARP_DIV_N_L_ISS 6
 // Gaussian mask width for cs_1
 #define PARAM_S1_ISS 369050.89730269293067976832
 // Squared Gaussian mask width for cs_1
@@ -173,8 +173,8 @@
 #define PARAM_ETA_ISS 93
 
 /*************************************************
-* [SHOW] Zero-Knowledge proof parameters
-**************************************************/
+ * [SHOW] Zero-Knowledge proof parameters
+ **************************************************/
 // Ring degree for the show proof
 #define PARAM_N_SHOW 64
 // Ring degree gap between the issuance proof and the signature (subring embedding)
@@ -194,19 +194,19 @@
 // Inverse of q_2 modulo q_1
 #define PARAM_Q2_INVMOD_Q1_SHOW 421549908863L
 // Module rank for the show proof
-#define PARAM_D_SHOW 23
+#define PARAM_D_SHOW 20
 // Witness dimension
-#define PARAM_M1_SHOW 211
+#define PARAM_M1_SHOW 149
 // ABDLOP commitment randomness dimension
-#define PARAM_M2_SHOW 74
+#define PARAM_M2_SHOW 72
 // Soundness amplification dimension
-#define PARAM_L_SHOW 7
+#define PARAM_L_SHOW 1
 // Dimension for Approximate Range Proof
 #define PARAM_ARP_SHOW 256
 // Rank for Approximate Range Proof (256 / n)
 #define PARAM_ARP_DIV_N_SHOW 4
 // 256 / n + l
-#define PARAM_ARP_DIV_N_L_SHOW 11
+#define PARAM_ARP_DIV_N_L_SHOW 5
 // Gaussian mask width for cs_1
 #define PARAM_S1_SHOW 582380223.29294335842132568359
 // Squared Gaussian mask width for cs_1
@@ -239,8 +239,8 @@
 #define PARAM_ETA_SHOW 93
 
 /*************************************************
-* Testing
-**************************************************/
+ * Testing
+ **************************************************/
 
 // The modulus factor
 #define Q_1_MOD 47

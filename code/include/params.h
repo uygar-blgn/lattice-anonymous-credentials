@@ -41,40 +41,63 @@
 **************************************************/
 // Ring degree for the signature
 #define PARAM_N 256
-// Modulus for the signature
-#define PARAM_Q 425801L
+// Modulus for the signature (q = q_L * q_H = 2401 * 169)
+#define PARAM_Q 405769L
+// Low modulus (q_L = b_L^k_L = 49^2)
+#define PARAM_QL 2401L
+// High modulus (q_H = b_H^k_H = 13^2)
+#define PARAM_QH 169L
 // Modulus bit-length upper bound for uniform sampling
-#define PARAM_Q_BITLEN 20
+#define PARAM_Q_BITLEN 19
 // Module rank for the signature
 #define PARAM_D 4
-// Gadget dimension
-#define PARAM_K 5
-// Gadget base
-#define PARAM_B 14
+// G_H gadget dimension
+#define PARAM_KH 2
+// G_L gadget dimension
+#define PARAM_KL 2
+// G_H gadget base
+#define PARAM_BH 13
+// G_L gadget base
+#define PARAM_BL 49
 // Dimension of the message vector (without usk)
 #define PARAM_M 10
 // Number of iterations for the spectral norm estimation
-#define PARAM_IT_SPEC_NORM 5
+#define PARAM_IT_SPEC_NORM 6
 // Hamming weight of the tags
 #define PARAM_W 5
 // Bound on the square spectral norm of R
-#define PARAM_R_MAX_SQ_SPECTRAL_NORM 7390.20585207465319399489
-// Gaussian parameter s_2 for v_2 and v_3
-#define PARAM_S2 68.17015305110869860528
-// Squared Gaussian parameter s_1^2
-#define PARAM_S1SQ 34270592.82034289091825485229
-// Gaussian width for p_2
-#define PARAM_SQRT_S2SQ_SGSQ 48.26510947391209782609
-// Negated ratio -1/(1/s_G^2 - 1/s_2^2)
-#define PARAM_SGINVSQ_S2INVSQ -4623.48663266090716206236
-// Negated ratio -s_G^2/(s_2^2 - s_G^2)
-#define PARAM_NEGSGSQ_DIV_S2SQ_SGSQ -0.99490375098435301915
-// Squared verification bound on v_1 (hiding case)
-#define PARAM_B1SQ 16568582601UL
+#define PARAM_R_MAX_SQ_SPECTRAL_NORM 3898.89415332639373446000
+// Difference s_1^2 - s_L^2 (for perturbation sampler p1_p2[i>=1])
+#define PARAM_S1SQ_SLSQ 22816850.56626987829804420471
+// Squared Gaussian parameter s_3^2 (for perturbation sampler p3)
+#define PARAM_S3SQ 22816838.86761695519089698792
+// Gaussian parameter s_4 for v_3
+#define PARAM_S4 76.49922142570575545051
+// Gaussian parameter s_L/b_L for Z-sampling of zL
+#define PARAM_SL_DIV_BL 3.38718927843394679300
+// Gaussian parameter s_H/b_H for Z-sampling of zH
+#define PARAM_SH_DIV_BH 3.38718927843394679300
+// Gaussian width for p_2 (sqrt(s_2^2 - s_L^2))
+#define PARAM_SQRT_S2SQ_SLSQ 3.42032935794184789202
+// Gaussian width for p_4 (sqrt(s_4^2 - s_H^2))
+#define PARAM_SQRT_S4SQ_SHSQ 62.55545719277940008851
+// Negated ratio -s_H^2*s_4^2/(s_4^2 - s_H^2) (for covariance)
+#define PARAM_NEG_SHSQS4SQ_DIV_S4SQ_SHSQ -2899.67458311796281122952
+// Negated ratio -s_H^2/(s_4^2 - s_H^2) (for covariance)
+#define PARAM_NEG_SHSQ_DIV_S4SQ_SHSQ -0.49549038516081478356
+// Squared verification bound on v_{1,1}
+#define PARAM_B11SQ 18149347086L
+// Squared verification bound on v_{1,2}
+#define PARAM_B12SQ 4652284329L
 // Squared verification bound on v_2
-#define PARAM_B2SQ 4886925UL
+#define PARAM_B2SQ 2238819L
 // Squared verification bound on v_3
-#define PARAM_B3SQ 1544265UL
+#define PARAM_B3SQ 367252L
+
+// Legacy compatibility constants for OSIG/SHOW layers (to be removed in Phases 6-7)
+// These were the old single-gadget SEP parameters: gadget dimension K=5, base B=14
+#define PARAM_K 5
+#define PARAM_B 14
 
 // Length of the public and secret seeds
 #define SEED_BYTES 32

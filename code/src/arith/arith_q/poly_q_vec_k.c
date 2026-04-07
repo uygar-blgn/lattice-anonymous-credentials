@@ -221,14 +221,8 @@ uint64_t poly_q_vec_k_norm2(const poly_q_vec_k arg) {
 * Arguments:   - poly_q_vec_k res: the polynomial to host the Gaussian sample
 **************************************************/
 void poly_q_vec_k_sample_gaussian_s2(poly_q_vec_k res) {
-  coeff_q cj;
-  size_t i,j;
-  for (i = 0; i < PARAM_K; i++) {
-  	for (j = 0; j < PARAM_N; j++) {
-  		cj = SampleZ(0, PARAM_S2);
-  		poly_q_set_coeff(res->entries[i], j, cj);
-  	}
-  }
+  /* Removed: PARAM_S2 no longer defined (SEP migrated to TSampler). */
+  (void)res;
 }
 
 /*************************************************

@@ -222,16 +222,11 @@ void poly_q_vec_d_bin_uniform(poly_q_vec_d vec, const uint8_t seed[SEED_BYTES], 
   }
 }
 
-/*************************************************
-* Name:        poly_q_vec_2d_dk_sample_perturb
-*
-* Description: Gaussian perturbation sampler (SamplePerturb)
-* 
-* Arguments:   - poly_q_vec_d *p1: array of polynomial vectors to host top perturbation (initialized)
-*              - poly_q_vec_d *p2: array of polynomial vectors to host bottom perturbation (initialized)
-*              - const poly_q_mat_d_d *R: array of polynomial matrices, secret key R 
-*              - const poly_real_mat_2d_2d *S: array of polynomial matrices, Schur complements for sampling
-**************************************************/
+/* NOTE: poly_q_vec_2d_dk_sample_perturb, sample_klein, poly_q_vec_2d_dk_sample_pre
+ * (old Klein-based SamplePre) have been removed. Use sampler() instead.
+ */
+
+#if 0  /* Old Klein sampler — kept for reference, not compiled */
 static void poly_q_vec_2d_dk_sample_perturb(poly_q_vec_d p1[2], poly_q_vec_d p2[PARAM_K], const poly_q_mat_d_d R[2][PARAM_K], const poly_real_mat_2d_2d S) {
   size_t i,j;
   poly_real tmp_sub, tmp_mul;
@@ -453,12 +448,283 @@ void poly_q_vec_2d_dk_sample_pre(
     poly_q_vec_d_clear(y[i]);
   }
 }
+#endif  /* Old Klein sampler */
 
 /*************************************************
 * Name:        poly_q_binary_fixed_weight
 *
 * Description: Sample binary polynomial with fixed Hamming weight PARAM_W
 * 
+* Arguments:   - poly_q res: output uniform binary polynomial with fixed Hamming weight (initialized)
+*              - uint8_t *state_in: state from which to expand the polynomial (allocated STATE_BYTES bytes)
+**************************************************/
+/*************************************************
+* Name:        perturbation_sampler
+*
+* Description: Gaussian perturbation sampler (SamplePerturb, Algorithm 4.3)
+*
+* Arguments:   - poly_q_vec_d *p1_p2: array of polynomial vectors to host top perturbation before K-projection (initialized)
+*              - poly_q_vec_d p3: polynomial vector to host middle perturbation (initialized)
+*              - poly_q_vec_d *p4: array of polynomial vectors to host bottom perturbation (initialized)
+*              - const poly_q_mat_d_d *R: array of polynomial matrices, secret key R
+*              - const poly_real_mat_2d_2d *S: polynomial matrix, Schur complements for sampling
+**************************************************/
+void perturbation_sampler(
+    poly_q_vec_d p1_p2[PARAM_KL],
+    poly_q_vec_d p3,
+    poly_q_vec_d p4[PARAM_KH],
+    const poly_q_mat_d_d R[2][PARAM_KH],
+    const poly_real_mat_2d_2d S) {
+  size_t i,j;
+  poly_real tmp_sub, tmp_mul;
+  poly_real_vec_2d c;
+
+  // init vectors and polynomials
+  poly_real_init(tmp_sub);
+  poly_real_init(tmp_mul);
+  poly_real_vec_2d_init(c);
+
+  // sample p_2 from Gaussian distribution with width sqrt(s_2² - s_L²)
+  for (i = 1; i < PARAM_KL; i++) {
+    poly_q_vec_d_gaussian_sqrt_s2sq_sLsq(p1_p2[i]); // probabilistic
+  }
+
+  // sample p_4 from Gaussian distribution with width sqrt(s_4² - s_H²)
+  for (i = 0; i < PARAM_KH; i++) {
+    poly_q_vec_d_gaussian_sqrt_s4sq_sHsq(p4[i]); // probabilistic
+  }
+
+  // p1_p2[0] = R1.p4, p3 = R2.p4  (p1_p2[0] and p3 only used as intermediate variables)
+  poly_q_mat_d_d_mul_vec_d(p1_p2[0], R[0][0], p4[0]);
+  poly_q_mat_d_d_mul_vec_d(p3, R[1][0], p4[0]);
+  for (i = 1; i < PARAM_KH; i++) {
+    poly_q_mat_d_d_muladd_vec_d(p1_p2[0], R[0][i], p4[i]);
+    poly_q_mat_d_d_muladd_vec_d(p3, R[1][i], p4[i]);
+  }
+
+  // convert p1_p2[0] and p3 to c, which is a poly_real_vec_2d, and scale with -s_H²/(s_4² - s_H²)
+  for (i = 0; i < PARAM_D; i++) {
+    poly_real_from_poly_q(c->entries[i          ], p1_p2[0]->entries[i]);
+    poly_real_from_poly_q(c->entries[i + PARAM_D], p3->entries[i]);
+    poly_real_mul_scalar(c->entries[i], c->entries[i], PARAM_NEG_SHSQ_DIV_S4SQ_SHSQ);
+    poly_real_mul_scalar(c->entries[i + PARAM_D], c->entries[i + PARAM_D], PARAM_NEG_SHSQ_DIV_S4SQ_SHSQ);
+  }
+
+  // sample p3 with pre-computed f_i
+  for (i = 2*PARAM_D; i > PARAM_D; i--) {
+    // sample p3->entries[i-1-PARAM_D] from a discrete Gaussian distribution with
+    // center c->entries[i-1] and variance M_tau(S->rows[i-1]->entries[i-1])
+    poly_real_samplefz(tmp_sub, S->rows[i-1]->entries[i-1], c->entries[i-1]); // probabilistic
+    poly_q_from_poly_real(p3->entries[i-1 - PARAM_D], tmp_sub);
+
+    // update the entries from c with indices j=0..i-2 by adding S->rows[j]->entries[i-1] (this already contains f_i^-1)
+    poly_real_sub(tmp_sub, tmp_sub, c->entries[i-1]);
+    for (j = 0; j < i-1; j++) {
+      poly_real_mul(tmp_mul, tmp_sub, S->rows[j]->entries[i-1]);
+      poly_real_add(c->entries[j], c->entries[j], tmp_mul);
+    }
+  }
+
+  // sample p1_p2[0] with pre-computed f_i
+  for (i = PARAM_D; i > 0; i--) {
+    // sample p1_p2[0]->entries[i-1] from a discrete Gaussian distribution with
+    // center c->entries[i-1] and variance M_tau(S->rows[i-1]->entries[i-1])
+    poly_real_samplefz(tmp_sub, S->rows[i-1]->entries[i-1], c->entries[i-1]); // probabilistic
+    poly_q_from_poly_real(p1_p2[0]->entries[i-1], tmp_sub);
+
+    // update the entries from c with indices j=0..i-2 by adding S->rows[j]->entries[i-1] (this already contains f_i^-1)
+    poly_real_sub(tmp_sub, tmp_sub, c->entries[i-1]);
+    for (j = 0; j < i-1; j++) {
+      poly_real_mul(tmp_mul, tmp_sub, S->rows[j]->entries[i-1]);
+      poly_real_add(c->entries[j], c->entries[j], tmp_mul);
+    }
+  }
+
+  //  clean up vectors and polynomials
+  poly_real_vec_2d_clear(c);
+  poly_real_clear(tmp_mul);
+  poly_real_clear(tmp_sub);
+}
+
+/*************************************************
+* Name:        gadget_sampler
+*
+* Description: Gadget sampling of zL and zH such that [G_L | q_L.G_{H,t}][z_L | z_H] = w
+*
+* Arguments:   - poly_q_vec_d *zL: array of polynomial vectors to host z_L (initialized)
+*              - poly_q_vec_d *zH: array of polynomial vectors to host z_H (initialized)
+*              - const poly_q_vec_d w: polynomial vector corrected syndrome w
+*              - const poly_q tag: polynomial, tag
+*              - const poly_q taginv: polynomial, tag^{-1} mod bH
+**************************************************/
+void gadget_sampler(
+    poly_q_vec_d zL[PARAM_KL],
+    poly_q_vec_d zH[PARAM_KH],
+    const poly_q_vec_d w,
+    const poly_q tag,
+    const poly_q taginv) {
+  size_t i,j;
+  poly_q tmp_poly, tmp_center;
+
+  // init polynomials
+  poly_q_init(tmp_poly);
+  poly_q_init(tmp_center);
+
+  // Gadget Sampling
+  for (i = 0; i < PARAM_D; i++) {
+    poly_q_set(tmp_poly, w->entries[i]);
+    // sampling zL
+    for (j = 0; j < PARAM_KL; j++) {
+      poly_q_mod_bL(tmp_center, tmp_poly);
+      poly_q_gaussian_coset_sL(zL[j]->entries[i], tmp_center);
+      poly_q_sub(tmp_center, tmp_poly, zL[j]->entries[i]); // tmp_center used as tmp variable
+      poly_q_div_bL(tmp_poly, tmp_center);
+    }
+    // sampling zH (tmp_poly holds l_{i,k_L})
+    for (j = 0; j < PARAM_KH; j++) {
+      poly_q_mul(tmp_center, taginv, tmp_poly);
+      poly_q_mod_bH(tmp_center, tmp_center);
+      poly_q_gaussian_coset_sH(zH[j]->entries[i], tmp_center);
+      poly_q_mul(tmp_center, tag, zH[j]->entries[i]); // tmp_center used as tmp variable
+      poly_q_sub(tmp_center, tmp_poly, tmp_center);
+      poly_q_div_bH(tmp_poly, tmp_center);
+    }
+  }
+  // clean up polynomials
+  poly_q_clear(tmp_poly);
+  poly_q_clear(tmp_center);
+}
+
+/*************************************************
+* Name:        sampler
+*
+* Description: TSampler - full preimage sampler (Algorithm 4.2)
+*
+* Arguments:   - poly_q_vec_d v11: polynomial vector to host top-left preimage (initialized)
+*              - poly_q_vec_d v12: polynomial vector to host top-right preimage (initialized)
+*              - poly_q_vec_d *v2: array of polynomial vectors to host bottom preimage (initialized)
+*              - const poly_q_mat_d_d *R: array of polynomial matrices, secret key R
+*              - const poly_q_mat_d_d A: polynomial matrix, public A'
+*              - const poly_q_mat_d_d *B: array of polynomial matrices, public B
+*              - const poly_q_vec_d u: polynomial vector, public u (including commitment)
+*              - const poly_q tag: polynomial, tag
+*              - const poly_q taginv: polynomial, tag^{-1} mod bH
+*              - const poly_real_mat_2d_2d S: polynomial matrix, Schur complements for sampling
+**************************************************/
+void sampler(
+    poly_q_vec_d v11,
+    poly_q_vec_d v12,
+    poly_q_vec_d v2[PARAM_KH],
+    const poly_q_mat_d_d R[2][PARAM_KH],
+    const poly_q_mat_d_d A,
+    const poly_q_mat_d_d B[PARAM_KH],
+    const poly_q_vec_d u,
+    const poly_q tag,
+    const poly_q taginv,
+    const poly_real_mat_2d_2d S) {
+  size_t i;
+  poly_q_vec_d p1_p2[PARAM_KL];
+  poly_q_vec_d p3;
+  poly_q_vec_d p4[PARAM_KH];
+  poly_q_vec_d w, tmp, zL[PARAM_KL], zH[PARAM_KH];
+  int64_t bexpi;
+
+  // init vectors
+  poly_q_vec_d_init(w);
+  poly_q_vec_d_init(tmp);
+  for (i = 0; i < PARAM_KL; i++) {
+    poly_q_vec_d_init(p1_p2[i]);
+    poly_q_vec_d_init(zL[i]);
+  }
+  poly_q_vec_d_init(p3);
+  for (i = 0; i < PARAM_KH; i++) {
+    poly_q_vec_d_init(p4[i]);
+    poly_q_vec_d_init(zH[i]);
+  }
+
+  // perturbation sampler
+  perturbation_sampler(p1_p2, p3, p4, R, S);
+
+  // w = u - G_L.p1_p2 - A.p3 + B.p4 - qL.tag.GH.p4
+  // compute G_L.p1_p2 into p1_p2[0] (stored for later)
+  bexpi = PARAM_BL;
+  for (i = 1; i < PARAM_KL; i++) {
+    poly_q_vec_d_mul_scalar(tmp, p1_p2[i], bexpi);
+    poly_q_vec_d_add(p1_p2[0], p1_p2[0], tmp);
+    bexpi *= PARAM_BL;
+  }
+
+  // compute w: first compute qL.GH.p4 in w
+  poly_q_vec_d_mul_scalar(w, p4[0], PARAM_QL);
+  bexpi = PARAM_QL * PARAM_BH;
+  for (i = 1; i < PARAM_KH; i++) {
+    poly_q_vec_d_mul_scalar(tmp, p4[i], bexpi);
+    poly_q_vec_d_add(w, w, tmp);
+    bexpi *= PARAM_BH;
+  }
+  // multiply by tag
+  poly_q_vec_d_mul_poly(w, w, tag);
+  // subtract from u
+  poly_q_vec_d_sub(w, u, w);
+  // subtract G_L.p1_p2
+  poly_q_vec_d_sub(w, w, p1_p2[0]);
+  // subtract A.p3
+  poly_q_mat_d_d_mulsub_vec_d(w, A, p3);
+  // add B.p4
+  for (i = 0; i < PARAM_KH; i++) {
+    poly_q_mat_d_d_muladd_vec_d(w, B[i], p4[i]);
+  }
+
+  // Gadget sampling
+  gadget_sampler(zL, zH, w, tag, taginv);
+
+  // v11 = G_L.p1_p2 + G_L.zL + R1.zH
+  // compute G_L.zL in zL[0]
+  bexpi = PARAM_BL;
+  for (i = 1; i < PARAM_KL; i++) {
+    poly_q_vec_d_mul_scalar(tmp, zL[i], bexpi);
+    poly_q_vec_d_add(zL[0], zL[0], tmp);
+    bexpi *= PARAM_BL;
+  }
+  // compute R1.zH in v11
+  poly_q_mat_d_d_mul_vec_d(v11, R[0][0], zH[0]);
+  for (i = 1; i < PARAM_KH; i++) {
+    poly_q_mat_d_d_muladd_vec_d(v11, R[0][i], zH[i]);
+  }
+  poly_q_vec_d_add(v11, v11, p1_p2[0]); // p1_p2[0] holds G_L.p1_p2
+  poly_q_vec_d_add(v11, v11, zL[0]);    // zL[0] holds G_L.zL
+
+  // v12 = p3 + R2.zH
+  poly_q_mat_d_d_mul_vec_d(v12, R[1][0], zH[0]);
+  for (i = 1; i < PARAM_KH; i++) {
+    poly_q_mat_d_d_muladd_vec_d(v12, R[1][i], zH[i]);
+  }
+  poly_q_vec_d_add(v12, v12, p3);
+
+  // v2 = p4 + zH
+  for (i = 0; i < PARAM_KH; i++) {
+    poly_q_vec_d_add(v2[i], p4[i], zH[i]);
+  }
+
+  // clean up vectors
+  poly_q_vec_d_clear(w);
+  poly_q_vec_d_clear(tmp);
+  for (i = 0; i < PARAM_KL; i++) {
+    poly_q_vec_d_clear(p1_p2[i]);
+    poly_q_vec_d_clear(zL[i]);
+  }
+  poly_q_vec_d_clear(p3);
+  for (i = 0; i < PARAM_KH; i++) {
+    poly_q_vec_d_clear(p4[i]);
+    poly_q_vec_d_clear(zH[i]);
+  }
+}
+
+/*************************************************
+* Name:        poly_q_binary_fixed_weight
+*
+* Description: Sample binary polynomial with fixed Hamming weight PARAM_W
+*
 * Arguments:   - poly_q res: output uniform binary polynomial with fixed Hamming weight (initialized)
 *              - uint8_t *state_in: state from which to expand the polynomial (allocated STATE_BYTES bytes)
 **************************************************/

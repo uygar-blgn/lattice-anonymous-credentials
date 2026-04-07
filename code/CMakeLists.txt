@@ -8,6 +8,9 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 add_executable(test)
 add_executable(bench)
+# sep_test: standalone build for testing the SEP layer only (Phases 1-5).
+# Full test/bench targets require Phases 6-7 (OSIG/Show migration) to be complete.
+add_executable(sep_test)
 
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(TEST_DIR "${CMAKE_SOURCE_DIR}/test")
@@ -20,6 +23,55 @@ set(INCLUDE_DIR
   "${CMAKE_SOURCE_DIR}/include/arith/arith_qshow"
   "${CMAKE_SOURCE_DIR}/include/arith/arith_real"
   "${CMAKE_SOURCE_DIR}/include/arith/arith_z")
+
+set(SOURCES_SEP
+  "${SRC_DIR}/arith/arith.c"
+  "${SRC_DIR}/arith/arith_q/poly_q.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_d.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_k.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_vec_m.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_d.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_k.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_mat_d_m.c"
+  "${SRC_DIR}/arith/arith_q/poly_q_sampling.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_d.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_k.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_l.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_256.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_256_l.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_vec_m2.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_mat_k_k.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_mat_d_k.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_mat_d_m2.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_mat_256l_m2.c"
+  "${SRC_DIR}/arith/arith_qiss/poly_qiss_sampling.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_d.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_k.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_l.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_256.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_256_l.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_m1.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_vec_m2.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_mat_k_k.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_mat_d_k.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_mat_d_m1.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_mat_d_m2.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_mat_256l_m2.c"
+  "${SRC_DIR}/arith/arith_qshow/poly_qshow_sampling.c"
+  "${SRC_DIR}/arith/arith_real/poly_real.c"
+  "${SRC_DIR}/arith/arith_real/poly_real_vec_2d.c"
+  "${SRC_DIR}/arith/arith_real/poly_real_mat_2d_2d.c"
+  "${SRC_DIR}/arith/arith_z/poly_z.c"
+  "${SRC_DIR}/arith/arith_z/poly_z_vec_d.c"
+  "${SRC_DIR}/arith/arith_z/poly_z_mat_d_d.c"
+  "${SRC_DIR}/covariance.c"
+  "${SRC_DIR}/four_squares.c"
+  "${SRC_DIR}/fips202.c"
+  "${SRC_DIR}/random.c"
+  "${SRC_DIR}/randombytes.c"
+  "${SRC_DIR}/sep.c")
 
 set(SOURCES_LAC
   "${SRC_DIR}/arith/arith.c"
@@ -124,3 +176,12 @@ target_link_libraries(test PUBLIC m)
 
 target_link_libraries(bench PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
 target_link_libraries(bench PUBLIC m)
+
+target_sources(sep_test PUBLIC
+  "${TEST_DIR}/sep_main.c"
+  "${SOURCES_SEP}")
+target_include_directories(sep_test PUBLIC ${INCLUDE_DIR})
+target_compile_options(sep_test PUBLIC ${WARN_ERROR_FLAGS} ${TEST_OPTS} ${SANITIZER_FLAGS})
+target_link_options(sep_test PUBLIC ${TEST_OPTS} ${SANITIZER_FLAGS})
+target_link_libraries(sep_test PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
+target_link_libraries(sep_test PUBLIC m)

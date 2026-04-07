@@ -406,8 +406,8 @@ static void osig_user_prove_round4(
 
   // computing C.y1 and adding to e1
   for (i = 0; i < PARAM_D; i++) {
-    // Top part of C.y1 (identity block: I * y1[:dk])
-    poly_qiss_vec_k_set(tmp_C_y1, y1[i]);
+    // Top part of C.y1
+    poly_qiss_vec_k_mul_scalar(tmp_C_y1, y1[i], PARAM_Q1_ISS); // q_1*I_{dk} x y1[:dk]
     for (j = 0; j < PARAM_D; j++) {
       poly_qiss_mat_k_k_mul_vec_k(tmp_vec_k, A_embed[i][j], y1[PARAM_D + j]); // part of y1 corresponding to r_{12}
       poly_qiss_vec_k_add(tmp_C_y1, tmp_C_y1, tmp_vec_k);

@@ -1,7 +1,6 @@
 #include "arith.h"
 #include "randombytes.h"
 #include "sep.h"
-#include "sampling.h"
 #include "poly_q_sampling.h"
 #include "fips202.h"
 #include "covariance.h"
@@ -17,7 +16,7 @@
 **************************************************/
 void sep_keys_init(sep_pk_t *pk, sep_sk_t *sk) {
   size_t i, j;
-  for (i = 0; i < PARAM_KH; i++) {
+  for (i = 0; i < PARAM_K; i++) {
     for (j = 0; j < 2; j++) {
       poly_q_mat_d_d_init(sk->R[j][i]);
     }
@@ -37,7 +36,7 @@ void sep_keys_init(sep_pk_t *pk, sep_sk_t *sk) {
 **************************************************/
 void sep_keys_clear(sep_pk_t *pk, sep_sk_t *sk) {
   size_t i, j;
-  for (i = 0; i < PARAM_KH; i++) {
+  for (i = 0; i < PARAM_K; i++) {
     for (j = 0; j < 2; j++) {
       poly_q_mat_d_d_clear(sk->R[j][i]);
     }
@@ -56,11 +55,11 @@ void sep_keys_clear(sep_pk_t *pk, sep_sk_t *sk) {
 **************************************************/
 void sep_sig_init(sep_sig_t *sig) {
   size_t i;
-  for (i = 0; i < PARAM_KH; i++) {
+  for (i = 0; i < PARAM_K; i++) {
     poly_q_vec_d_init(sig->v2[i]);
   }
   poly_q_vec_d_init(sig->v12);
-  poly_q_init(sig->v3);
+  poly_q_vec_k_init(sig->v3);
   poly_q_init(sig->tag);
 }
 
@@ -74,11 +73,11 @@ void sep_sig_init(sep_sig_t *sig) {
 **************************************************/
 void sep_sig_clear(sep_sig_t *sig) {
   size_t i;
-  for (i = 0; i < PARAM_KH; i++) {
+  for (i = 0; i < PARAM_K; i++) {
     poly_q_vec_d_clear(sig->v2[i]);
   }
   poly_q_vec_d_clear(sig->v12);
-  poly_q_clear(sig->v3);
+  poly_q_vec_k_clear(sig->v3);
   poly_q_clear(sig->tag);
 }
 
@@ -114,23 +113,23 @@ void sep_keygen(sep_pk_t *pk, sep_sk_t *sk) {
   // expand uniform A' from seed
   poly_q_mat_d_d_uniform(A, public_seed, DOMAIN_SEPARATOR_A, 0);
 
-  // sample R from B_1 (binomial), reject if spectral norm exceeds bound
+  // sample R from B_1 (binomial)
   kappa = 0;
   do {
-    for (size_t i = 0; i < PARAM_KH; i++) {
+    for (size_t i = 0; i < PARAM_K; i++) {
       for (size_t j = 0; j < 2; j++) {
         poly_q_mat_d_d_binomial(sk->R[j][i], secret_seed, kappa++, DOMAIN_SEPARATOR_R);
       }
     }
-  } while(sk_sq_spectral_norm(RRstar, sk->R));
+  } while(sk_sq_spectral_norm(RRstar, sk->R) > PARAM_R_MAX_SQ_SPECTRAL_NORM);
 
   // compute B = (I | A')R
-  for (size_t i = 0; i < PARAM_KH; i++) {
+  for (size_t i = 0; i < PARAM_K; i++) {
     poly_q_mat_d_d_mul_mat_d_d(pk->B[i], A, sk->R[1][i]);
     poly_q_mat_d_d_add(pk->B[i], pk->B[i], sk->R[0][i]);
   }
 
-  // append public seed to pk for extending A', u, D, a3
+  // append public seed to pk for extending A', u, D, A3
   for (size_t i = 0; i < SEED_BYTES; i++) {
     pk->seed[i] = public_seed[i];
   }
@@ -160,20 +159,19 @@ void sep_keygen(sep_pk_t *pk, sep_sk_t *sk) {
 **************************************************/
 void _sep_sign_commitment(sep_sig_t *sig, uint8_t state[STATE_BYTES], const sep_sk_t *sk, const sep_pk_t *pk, const poly_q_vec_d cmt) {
   size_t i;
-  poly_q_vec_d a3;
+  poly_q_mat_d_k A3;
   poly_q_mat_d_d A;
   poly_q_vec_d u, tmp;
-  poly_q_vec_d v11;
-  poly_q taginv;
-  uint64_t norm2sq_v11, norm2sq_v12, norm2sq_v2, norm2sq_v3;
+  poly_q_vec_d v1[2];
+  uint64_t norm2sq_v1, norm2sq_v2, norm2sq_v3;
 
   // init matrices and vectors
   poly_q_mat_d_d_init(A);
-  poly_q_vec_d_init(a3);
+  poly_q_mat_d_k_init(A3);
   poly_q_vec_d_init(u);
   poly_q_vec_d_init(tmp);
-  poly_q_vec_d_init(v11);
-  poly_q_init(taginv);
+  poly_q_vec_d_init(v1[0]);
+  poly_q_vec_d_init(v1[1]);
 
   // compute tag from state
   poly_q_binary_fixed_weight(sig->tag, state);
@@ -192,45 +190,45 @@ void _sep_sign_commitment(sep_sig_t *sig, uint8_t state[STATE_BYTES], const sep_
     carry = stateinc >> 32;
   }
 
-  // expand uniform matrices A', a3, and uniform vector u
+  // expand uniform matrices A', A3, and uniform vector u
   poly_q_mat_d_d_uniform(A, pk->seed, DOMAIN_SEPARATOR_A, 0);
-  poly_q_vec_d_uniform(a3, pk->seed, DOMAIN_SEPARATOR_A3);
+  poly_q_mat_d_k_uniform(A3, pk->seed, DOMAIN_SEPARATOR_A3);
   poly_q_vec_d_uniform(u, pk->seed, DOMAIN_SEPARATOR_U);
 
-  // compute tag inverse mod (b_H, x^n+1)
-  poly_q_invert_mod_bH(taginv, sig->tag);
-
 reject_signature:
-  // sample v3 from discrete Gaussian with width s4
-  poly_q_sample_gaussian_s4(sig->v3); // probabilistic
+  // sample v3 from discrete Gaussian
+  poly_q_vec_k_sample_gaussian_s2(sig->v3); // probabilistic
 
-  // compute target: tmp = u + cmt - a3*v3
-  poly_q_vec_d_mul_poly(tmp, a3, sig->v3);
+  // compute u + cmt - A3.v3
+  poly_q_mat_d_k_mul_vec_k(tmp, A3, sig->v3);
   poly_q_vec_d_sub(tmp, cmt, tmp);
   poly_q_vec_d_add(tmp, u, tmp);
 
-  // call tag-friendly sampler: output v11, sig->v12, sig->v2
-  sampler(v11, sig->v12, sig->v2, sk->R, A, pk->B, tmp, sig->tag, taginv, sk->S); // probabilistic
+  // call SamplePre, output in v1, sig->v2
+  poly_q_vec_2d_dk_sample_pre(v1, sig->v2, sk->R, A, pk->B, tmp, sig->tag, sk->S); // probabilistic
 
   // check l2 norms before outputting signature
-  norm2sq_v11 = poly_q_vec_d_norm2(v11);
-  norm2sq_v12 = poly_q_vec_d_norm2(sig->v12);
+  norm2sq_v1 = poly_q_vec_d_norm2(v1[0]);
+  norm2sq_v1 += poly_q_vec_d_norm2(v1[1]);
   norm2sq_v2 = poly_q_vec_d_norm2(sig->v2[0]);
-  for (i = 1; i < PARAM_KH; i++) {
+  for (i = 1; i < PARAM_K; i++) {
     norm2sq_v2 += poly_q_vec_d_norm2(sig->v2[i]);
   }
-  norm2sq_v3 = poly_q_sq_norm2(sig->v3);
-  if((norm2sq_v11 > PARAM_B11SQ) || (norm2sq_v12 > PARAM_B12SQ) || (norm2sq_v2 > PARAM_B2SQ) || (norm2sq_v3 > PARAM_B3SQ)) {
+  norm2sq_v3 = poly_q_vec_k_norm2(sig->v3);
+  if((norm2sq_v1 > PARAM_B1SQ) || (norm2sq_v2 > PARAM_B2SQ) || (norm2sq_v3 > PARAM_B3SQ)) {
     goto reject_signature;
   }
 
+  // extract v12 from v1
+  poly_q_vec_d_set(sig->v12, v1[1]);
+
   // clean up matrices and vectors
   poly_q_mat_d_d_clear(A);
-  poly_q_vec_d_clear(a3);
+  poly_q_mat_d_k_clear(A3);
   poly_q_vec_d_clear(u);
   poly_q_vec_d_clear(tmp);
-  poly_q_vec_d_clear(v11);
-  poly_q_clear(taginv);
+  poly_q_vec_d_clear(v1[0]);
+  poly_q_vec_d_clear(v1[1]);
 }
 
 /*************************************************
@@ -277,75 +275,79 @@ void sep_sign(sep_sig_t *sig, uint8_t state[STATE_BYTES], const sep_sk_t *sk, co
 * Description: Verifies signature from the precomputed commitment cmt = D.m (standalone
 *              signature) or cmt = Ds.usk + D.m (anonymous credentials issuance)
 *
-* Arguments:   - const sep_sig_t *sig: pointer to the input signature structure
+* Arguments:   - const sep_sig_t *sig: pointer to the input signature structure 
 *              - const poly_q_vec_d cmt: binding commitment used in the verification
 *              - const sep_pk_t *pk: pointer to public key structure
-*
+* 
 * Returns 1 if signature could be verified correctly and 0 otherwise
 **************************************************/
 int _sep_verify_from_commitment(const sep_sig_t *sig, const poly_q_vec_d cmt, const sep_pk_t *pk) {
   size_t i, j;
   int64_t bexpi;
   poly_q_vec_d u, v11;
-  poly_q_vec_d a3;
+  poly_q_mat_d_k A3;
   poly_q_mat_d_d A;
   poly_q_mat_d_d Btmp;
   poly_q tag_times_bexpi;
-  uint64_t norm2sq_v11, norm2sq_v12, norm2sq_v2, norm2sq_v3;
+  uint64_t norm2sq_v1, norm2sq_v2, norm2sq_v3;
   int64_t tag_weight;
 
   // init matrices, vectors and polynomials
   poly_q_mat_d_d_init(A);
   poly_q_mat_d_d_init(Btmp);
-  poly_q_vec_d_init(a3);
+  poly_q_mat_d_k_init(A3);
   poly_q_vec_d_init(v11);
   poly_q_vec_d_init(u);
   poly_q_init(tag_times_bexpi);
 
-  // expand uniform matrices A', a3, and uniform vector u
+  // expand uniform matrices A', A3, and uniform vector u
   poly_q_mat_d_d_uniform(A, pk->seed, DOMAIN_SEPARATOR_A, 0);
-  poly_q_vec_d_uniform(a3, pk->seed, DOMAIN_SEPARATOR_A3);
+  poly_q_mat_d_k_uniform(A3, pk->seed, DOMAIN_SEPARATOR_A3);
   poly_q_vec_d_uniform(u, pk->seed, DOMAIN_SEPARATOR_U);
 
-  // compute v11 = u + cmt - A'.v12 + (B - q_L*b_H^i*tag*I).v2 - a3*v3
+  // compute v11 = u + cmt - A'.v12 + (B - tG).v2 - A3.v3
   poly_q_vec_d_add(v11, u, cmt);
   // now we can use u as a temp variable
-  poly_q_vec_d_mul_poly(u, a3, sig->v3);
+  poly_q_mat_d_k_mul_vec_k(u, A3, sig->v3);
   poly_q_mat_d_d_muladd_vec_d(u, A, sig->v12);
   poly_q_vec_d_sub(v11, v11, u);
-  // now we have v11 = u + cmt - A'.v12 - a3*v3
-  bexpi = PARAM_QL;
-  for (i = 0; i < PARAM_KH; i++) {
-    // copy B to Btmp and subtract q_L * b_H^i * tag from diagonal
+  // now we have v11 = u + cmt - A'.v12 - A3.v3
+  bexpi = 1;
+  for (i = 0; i < PARAM_K; i++) {
+    // copy B to Btmp
     poly_q_mat_d_d_set(Btmp, pk->B[i]);
     for (j = 0; j < PARAM_D; j++) {
-      poly_q_mul_scalar(tag_times_bexpi, sig->tag, bexpi);
-      poly_q_sub(Btmp->rows[j]->entries[j], Btmp->rows[j]->entries[j], tag_times_bexpi);
+      if (i == 0) {
+        poly_q_sub(Btmp->rows[j]->entries[j], Btmp->rows[j]->entries[j], sig->tag);
+      } else {
+        poly_q_mul_scalar(tag_times_bexpi, sig->tag, bexpi);
+        poly_q_sub(Btmp->rows[j]->entries[j], Btmp->rows[j]->entries[j], tag_times_bexpi);
+      }
     }
     poly_q_mat_d_d_muladd_vec_d(v11, Btmp, sig->v2[i]);
-    bexpi *= PARAM_BH;
+    bexpi *= PARAM_B;
   }
 
-  // compute l2 norms of v11, v12, v2, and v3
-  norm2sq_v11 = poly_q_vec_d_norm2(v11);
-  norm2sq_v12 = poly_q_vec_d_norm2(sig->v12);
+  // compute l2 norms of v11||v12, v2, and v3
+  norm2sq_v1 = poly_q_vec_d_norm2(v11);
+  norm2sq_v1 += poly_q_vec_d_norm2(sig->v12);
   norm2sq_v2 = poly_q_vec_d_norm2(sig->v2[0]);
-  for (i = 1; i < PARAM_KH; i++) {
+  for (i = 1; i < PARAM_K; i++) {
     norm2sq_v2 += poly_q_vec_d_norm2(sig->v2[i]);
   }
-  norm2sq_v3 = poly_q_sq_norm2(sig->v3);
+  norm2sq_v3 = poly_q_vec_k_norm2(sig->v3);
   tag_weight = poly_q_weight(sig->tag); // returns -1 if polynomial is non-binary, else the number of ones
 
   // clean up matrices, vectors and polynomials
   poly_q_mat_d_d_clear(A);
   poly_q_mat_d_d_clear(Btmp);
-  poly_q_vec_d_clear(a3);
+  poly_q_mat_d_k_clear(A3);
   poly_q_vec_d_clear(v11);
   poly_q_vec_d_clear(u);
   poly_q_clear(tag_times_bexpi);
 
   // return check
-  return (norm2sq_v11 <= PARAM_B11SQ) && (norm2sq_v12 <= PARAM_B12SQ) && (norm2sq_v2 <= PARAM_B2SQ) && (norm2sq_v3 <= PARAM_B3SQ) && (tag_weight == PARAM_W);
+  return (norm2sq_v1 <= PARAM_B1SQ) && (norm2sq_v2 <= PARAM_B2SQ) && (norm2sq_v3 <= PARAM_B3SQ) && (tag_weight == PARAM_W);
 }
 
 /*************************************************
@@ -353,10 +355,10 @@ int _sep_verify_from_commitment(const sep_sig_t *sig, const poly_q_vec_d cmt, co
 *
 * Description: Verifies signature on the message (standalone signature)
 *
-* Arguments:   - const sep_sig_t *sig: pointer to the input signature structure
+* Arguments:   - const sep_sig_t *sig: pointer to the input signature structure 
 *              - const uint8_t *msg: pointer to input message byte array (allocated PARAM_M*PARAM_N/8 bytes)
 *              - const sep_pk_t *pk: pointer to public key structure
-*
+* 
 * Returns 1 if signature could be verified correctly and 0 otherwise
 **************************************************/
 int sep_verify(const sep_sig_t *sig, const uint8_t msg[PARAM_M*PARAM_N/8], const sep_pk_t *pk) {

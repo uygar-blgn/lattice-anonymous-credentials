@@ -239,11 +239,11 @@ void osig_user_embed(
     poly_qiss_subring_embed_vec_k(s1[i + 4*PARAM_D], tmp, 1); // msg
   }
 
-  // embedding syndrome u = [theta(cmt-upk) | theta(upk)]
+  // embedding syndrome u = q1 * [theta(cmt-upk) | theta(upk)]
   for (i = 0; i < PARAM_D; i++) {
     poly_q_sub(tmp, cmt->entries[i], upk->t->entries[i]);
-    poly_qiss_subring_embed_vec_k(u[i          ], tmp, 1);                // cmt - upk
-    poly_qiss_subring_embed_vec_k(u[i + PARAM_D], upk->t->entries[i], 1); // upk
+    poly_qiss_subring_embed_vec_k(u[i          ], tmp, PARAM_Q1_ISS);                // cmt - upk 
+    poly_qiss_subring_embed_vec_k(u[i + PARAM_D], upk->t->entries[i], PARAM_Q1_ISS); // upk
   }
 
   // expanding uniform A', D, Ds
@@ -255,12 +255,12 @@ void osig_user_embed(
   // embedding A, D, Ds
   for (i = 0; i < PARAM_D; i++) {
     for (j = 0; j < PARAM_D; j++) {
-      poly_qiss_subring_embed_mat_k_k(A_embed[i][j], A->rows[i]->entries[j], 1); // A'
-      poly_qiss_subring_embed_mat_k_k(Ds_embed[i][j          ], Ds[0]->rows[i]->entries[j], 1); // Ds[:,0:PARAM_D]
-      poly_qiss_subring_embed_mat_k_k(Ds_embed[i][j + PARAM_D], Ds[1]->rows[i]->entries[j], 1); // Ds[:,PARAM_D:]
+      poly_qiss_subring_embed_mat_k_k(A_embed[i][j], A->rows[i]->entries[j], PARAM_Q1_ISS); // A'
+      poly_qiss_subring_embed_mat_k_k(Ds_embed[i][j          ], Ds[0]->rows[i]->entries[j], PARAM_Q1_ISS); // Ds[:,0:PARAM_D]
+      poly_qiss_subring_embed_mat_k_k(Ds_embed[i][j + PARAM_D], Ds[1]->rows[i]->entries[j], PARAM_Q1_ISS); // Ds[:,PARAM_D:]
     }
     for (j = 0; j < PARAM_M; j++) {
-      poly_qiss_subring_embed_mat_k_k(D_embed[i][j], D->rows[i]->entries[j], 1); // D
+      poly_qiss_subring_embed_mat_k_k(D_embed[i][j], D->rows[i]->entries[j], PARAM_Q1_ISS); // D
     }
   }
 

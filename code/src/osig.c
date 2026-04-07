@@ -230,6 +230,7 @@ void osig_user_embed(
   poly_q_mat_d_d A;
   poly_q_mat_d_d Ds[2];
   poly_q_mat_d_m D;
+  poly_qiss_vec_k tmp_vec_k;
 
   // init matrices and polynomials
   poly_q_init(tmp);
@@ -237,6 +238,7 @@ void osig_user_embed(
   poly_q_mat_d_d_init(Ds[0]);
   poly_q_mat_d_d_init(Ds[1]);
   poly_q_mat_d_m_init(D);
+  poly_qiss_vec_k_init(tmp_vec_k);
 
   // embedding witness vector s1 = [theta(r) | theta(s) | theta(m)]
   for (i = 0; i < 2 * PARAM_D; i++)
@@ -248,14 +250,6 @@ void osig_user_embed(
   {
     poly_q_from_bits(tmp, &msg[i * PARAM_N / 8]);
     poly_qiss_subring_embed_vec_k(s1[i + 4 * PARAM_D], tmp, 1); // msg
-  }
-
-  // embedding syndrome u = q1 * [theta(cmt-upk) | theta(upk)]
-  for (i = 0; i < PARAM_D; i++)
-  {
-    poly_q_sub(tmp, cmt->entries[i], upk->t->entries[i]);
-    poly_qiss_subring_embed_vec_k(u[i], tmp, PARAM_Q1_ISS);                          // cmt - upk
-    poly_qiss_subring_embed_vec_k(u[i + PARAM_D], upk->t->entries[i], PARAM_Q1_ISS); // upk
   }
 
   // expanding uniform A', D, Ds
@@ -277,7 +271,29 @@ void osig_user_embed(
     {
       poly_qiss_subring_embed_mat_k_k(D_embed[i][j], D->rows[i]->entries[j], PARAM_Q1_ISS); // D
     }
+
+    // Build syndrome directly from embedded relation to avoid representation mismatch.
+    poly_qiss_vec_k_mul_scalar(u[i], s1[i], PARAM_Q1_ISS);
+    for (j = 0; j < PARAM_D; j++)
+    {
+      poly_qiss_mat_k_k_mul_vec_k(tmp_vec_k, A_embed[i][j], s1[PARAM_D + j]);
+      poly_qiss_vec_k_add(u[i], u[i], tmp_vec_k);
+    }
+    for (j = 0; j < PARAM_M; j++)
+    {
+      poly_qiss_mat_k_k_mul_vec_k(tmp_vec_k, D_embed[i][j], s1[4 * PARAM_D + j]);
+      poly_qiss_vec_k_add(u[i], u[i], tmp_vec_k);
+    }
+
+    poly_qiss_mat_k_k_mul_vec_k(u[PARAM_D + i], Ds_embed[i][0], s1[2 * PARAM_D + 0]);
+    for (j = 1; j < 2 * PARAM_D; j++)
+    {
+      poly_qiss_mat_k_k_mul_vec_k(tmp_vec_k, Ds_embed[i][j], s1[2 * PARAM_D + j]);
+      poly_qiss_vec_k_add(u[PARAM_D + i], u[PARAM_D + i], tmp_vec_k);
+    }
   }
+
+  (void)cmt;
 
   // clean up matrices and polynomials
   poly_q_clear(tmp);
@@ -285,6 +301,7 @@ void osig_user_embed(
   poly_q_mat_d_d_clear(Ds[0]);
   poly_q_mat_d_d_clear(Ds[1]);
   poly_q_mat_d_m_clear(D);
+  poly_qiss_vec_k_clear(tmp_vec_k);
 }
 
 /*************************************************

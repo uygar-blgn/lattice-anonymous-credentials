@@ -39,9 +39,9 @@ int show_verify(
   size_t i, j, k, i_k_quot, i_k_rem;
   int is_valid = 1;
   uint8_t buf[CHAL4_SHOW_INPUT_BYTES] = {0}, challenge_seed[SEED_BYTES];
-  uint64_t sq_norm_z3, sq_norm_z2;
+  uint128 sq_norm_z3, sq_norm_z2;  // wider: z3 coeff^2 can exceed uint64 with new sigma3
   uint128 sq_norm_z1;
-  int64_t bexpi;
+  coeff_qshow bexpi;  // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
   coeff_qshow chal_2[PARAM_L_SHOW][PARAM_ARP_SHOW + 6];
   coeff_qshow tmp_coeff;
   poly_qshow tmp_poly, z1s_z1, z1s_c_one, sum_mu_gamma[7], t0, c, c_one;
@@ -212,7 +212,8 @@ int show_verify(
     poly_qshow_mul(tmp_poly, tmp_poly, proof->z1->entries[i]);
     poly_qshow_add(z1s_z1, z1s_z1, tmp_poly);
   }
-  poly_qshow_mul_scalar(tmp_poly, c, (PARAM_B11SQ + PARAM_B12SQ)); // c^2 (B11^2 + B12^2)
+  // Use proof bounds B'_{1,i}^2 = (B_{1,i} + sqrt(nd))^2 (§A.3)
+  poly_qshow_mul_scalar(tmp_poly, c, (coeff_qshow)(PARAM_B11_PRIME_SQ + PARAM_B12_PRIME_SQ)); // c^2 (B'_{1,1}^2 + B'_{1,2}^2)
   poly_qshow_sub(z1s_z1, z1s_z1, tmp_poly);
   poly_qshow_mul(z1s_z1, z1s_z1, sum_mu_gamma[0]);
   poly_qshow_add(t0, t0, z1s_z1);
@@ -286,12 +287,12 @@ int show_verify(
     for (j = 0; j < PARAM_K_SHOW; j++)
     {
       poly_qshow_zero(Gz1_v2[i]->entries[j]);
-      bexpi = (int64_t)PARAM_Q1_SHOW * PARAM_QL;
+      bexpi = (coeff_qshow)PARAM_Q1_SHOW * (coeff_qshow)PARAM_QL;
       for (k = 0; k < PARAM_KH; k++)
       {
         poly_qshow_mul_scalar(tmp_poly, proof->z1->entries[IDX_V2_SHOW + k * PARAM_D * PARAM_K_SHOW + i * PARAM_K_SHOW + j], bexpi);
         poly_qshow_add(Gz1_v2[i]->entries[j], Gz1_v2[i]->entries[j], tmp_poly);
-        bexpi *= PARAM_BH;
+        bexpi *= (coeff_qshow)PARAM_BH;
       }
     }
   }
@@ -377,7 +378,7 @@ int show_verify(
     i_k_quot = i / PARAM_K_SHOW;
     i_k_rem = i % PARAM_K_SHOW;
     // y1s_y1 used as temp variable to host ([A|-B|A3|-Ds|-D].[y1_v1|y1_v2|y1_v3|y1_s|y1_m])_i
-    poly_qshow_mul_scalar(z1s_z1, proof->z1->entries[IDX_V1_SHOW + i], PARAM_Q1_SHOW);
+    poly_qshow_mul_scalar(z1s_z1, proof->z1->entries[IDX_V1_SHOW + i], (coeff_qshow)PARAM_Q1_SHOW);
     for (j = 0; j < PARAM_D * PARAM_K_SHOW; j++)
     {
       poly_qshow_mul(tmp_poly, A_embed[i_k_quot][j / PARAM_K_SHOW]->rows[i_k_rem]->entries[j % PARAM_K_SHOW], proof->z1->entries[IDX_V12_SHOW + j]);
@@ -427,10 +428,10 @@ int show_verify(
   for (i = 0; i < PARAM_ARP_SHOW; i++)
   {
     tmp_coeff = proof->z3[i];
-    CHK_UI_OVF_ADDITION(sq_norm_z3, tmp_coeff * tmp_coeff);
+    sq_norm_z3 += (uint128)((int128)tmp_coeff * (int128)tmp_coeff);
   }
   is_valid = is_valid && (sq_norm_z1 <= ((uint128)PARAM_B1SQ_SHOW_LOW64 + (((uint128)PARAM_B1SQ_SHOW_HIGH64) << 64)));
-  is_valid = is_valid && (sq_norm_z2 <= PARAM_B2SQ_SHOW) && (sq_norm_z3 <= PARAM_B3SQ_SHOW) && poly_qshow_equal(proof->c, c);
+  is_valid = is_valid && (sq_norm_z2 <= (uint128)PARAM_B2SQ_SHOW) && (sq_norm_z3 <= (uint128)PARAM_B3SQ_SHOW) && poly_qshow_equal(proof->c, c);
 
   // clean up
 show_verify_cleanup:

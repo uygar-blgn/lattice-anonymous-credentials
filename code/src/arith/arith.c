@@ -344,7 +344,7 @@ uint64_t challenge_size_iss(const poly_qiss c) {
 *              - const poly_q arg: polynomial to be embedded
 *              - const int64_t fac: scalar factor during lifting (1 or PARAM_Q1_SHOW)
 **************************************************/
-void poly_qshow_subring_embed_vec_k(poly_qshow_vec_k res, const poly_q arg, const int64_t fac) {
+void poly_qshow_subring_embed_vec_k(poly_qshow_vec_k res, const poly_q arg, const coeff_qshow fac) {
   size_t i,j;
   coeff_q c_q;
   coeff_qshow c_qshow;
@@ -367,7 +367,7 @@ void poly_qshow_subring_embed_vec_k(poly_qshow_vec_k res, const poly_q arg, cons
 *              - const poly_q arg: polynomial to be embedded
 *              - const int64_t fac: scalar factor during lifting (1 or PARAM_Q1_SHOW)
 **************************************************/
-void poly_qshow_subring_embed_mat_k_k(poly_qshow_mat_k_k res, const poly_q arg, const int64_t fac) {
+void poly_qshow_subring_embed_mat_k_k(poly_qshow_mat_k_k res, const poly_q arg, const coeff_qshow fac) {
   size_t i, j;
   poly_qshow_vec_k tmp_vec, tmp_vec_x;
   poly_qshow tmp;

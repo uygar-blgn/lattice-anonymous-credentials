@@ -8,7 +8,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <flint/nmod_poly.h>
+#include <flint/fmpz_mod_poly.h>
+#include <flint/fmpz_mod.h>
+#include <flint/fmpz.h>
+#include <gmp.h>
 
 #include "params.h"
 
@@ -17,14 +20,18 @@ __extension__ typedef __int128 int128;
 __extension__ typedef unsigned __int128 uint128;
 #endif
 
-#define COEFFQSHOW_PACKEDBYTES 8
+// 9 bytes per coefficient: ceil(65/8) = 9 (qπ₂ requires 65 bits)
+#define COEFFQSHOW_PACKEDBYTES 9
 #define POLYQSHOW_PACKEDBYTES (PARAM_N_SHOW * COEFFQSHOW_PACKEDBYTES)
 
-//typedef nmod_poly_t __poly_qshow;
+// Backing polynomial type: arbitrary-precision modulus via fmpz_mod_poly
+typedef fmpz_mod_poly_t poly_qshow;
 
-typedef nmod_poly_t poly_qshow;
+// Coefficient type: int128 to hold values in [0, qπ₂-1] where qπ₂ ≈ 2^65
+typedef int128 coeff_qshow;
 
-typedef int64_t coeff_qshow;
+// Accessor for the shared fmpz_mod context (initialized in arith_qshow_setup)
+const fmpz_mod_ctx_t *arith_qshow_ctx(void);
 
 void arith_qshow_setup(void);
 void arith_qshow_teardown(void);

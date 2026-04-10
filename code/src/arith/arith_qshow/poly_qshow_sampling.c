@@ -17,51 +17,43 @@
 static void poly_qshow_uniform(poly_qshow pout, const uint8_t seed[SEED_BYTES], uint32_t domain_separator, size_t i, size_t j) {
   uint8_t output[SHAKE128_RATE * 2];
   keccak_state state;
-  size_t k,cnt,off,bytecnt;
+  size_t k, cnt, off, bytecnt;
   shake128_init(&state);
   shake128_absorb(&state, seed, SEED_BYTES);
   shake128_absorb(&state, (const uint8_t*)&domain_separator, sizeof(uint32_t));
-  shake128_absorb(&state, (const uint8_t*) &i, sizeof(i));
-  shake128_absorb(&state, (const uint8_t*) &j, sizeof(j));
+  shake128_absorb(&state, (const uint8_t*)&i, sizeof(i));
+  shake128_absorb(&state, (const uint8_t*)&j, sizeof(j));
   shake128_finalize(&state);
   shake128_squeezeblocks(output, 2, &state);
-  bytecnt = 2*SHAKE128_RATE;
+  bytecnt = 2 * SHAKE128_RATE;
+
+  // qπ₂ = 2^65 - 163 (65 bits): read 9 bytes per trial, mask to 65 bits, reject if ≥ qπ₂
+  static const uint128 Q    = ((uint128)PARAM_Q_SHOW_HIGH64 << 64)
+                             |  (uint128)PARAM_Q_SHOW_LOW64;
+  static const uint128 MASK = ((uint128)1 << PARAM_Q_SHOW_BITLEN) - 1;
 
   cnt = 0;
   off = 0;
   while (cnt < PARAM_N_SHOW) {
-#if PARAM_Q_SHOW_BITLEN > 60
-#error "PARAM_Q_SHOW_BITLEN too big for uniform sampling."
-#else
-    // idea: take 15 bytes, ignore MSBs
-    if (bytecnt < 15) {
+    if (bytecnt < 9) {
       for (k = 0; k < bytecnt; k++) {
-        output[k] = output[off++];
+        output[k] = output[off + k];
       }
       shake128_squeezeblocks(&output[bytecnt], 1, &state);
       off = 0;
       bytecnt += SHAKE128_RATE;
     }
-    uint64_t tmp8byte = output[off] | ((uint64_t)output[off+1] << 8) | ((uint64_t)output[off+2] << 16) | ((uint64_t)output[off+3] << 24) | ((uint64_t)output[off+4] << 32) | ((uint64_t)output[off+5] << 40) | ((uint64_t)output[off+6] << 48) | ((uint64_t)output[off+7] << 56);
-    uint64_t tmp = tmp8byte & ((1UL<<PARAM_Q_SHOW_BITLEN)-1);
-    if (tmp < PARAM_Q_SHOW) {
-      poly_qshow_set_coeff(pout, cnt++, tmp);
+    // Read 9 bytes little-endian into a uint128
+    uint128 tmp = 0;
+    for (k = 0; k < 9; k++) {
+      tmp |= ((uint128)output[off + k]) << (8 * k);
     }
-    if (cnt >= PARAM_N_SHOW) {
-      break;
+    tmp &= MASK;  // keep only the low 65 bits
+    if (tmp < Q) {
+      poly_qshow_set_coeff(pout, cnt++, (coeff_qshow)tmp);
     }
-    tmp8byte >>= 60;
-    tmp8byte |= (output[off+8] | ((uint64_t)output[off+9] << 8) | ((uint64_t)output[off+10] << 16) | ((uint64_t)output[off+11] << 24) | ((uint64_t)output[off+12] << 32) | ((uint64_t)output[off+13] << 40) | ((uint64_t)output[off+14] << 48)) << 4;
-    tmp = tmp8byte & ((1UL<<PARAM_Q_SHOW_BITLEN)-1);
-    if (tmp < PARAM_Q_SHOW) {
-      poly_qshow_set_coeff(pout, cnt++, tmp);
-    }
-    off += 15;
-    bytecnt -= 15;
-#if PARAM_Q_SHOW_BITLEN < 58
-#warning "PARAM_Q_SHOW_BITLEN maybe unsuitable for efficient uniform sampling."
-#endif
-#endif
+    off += 9;
+    bytecnt -= 9;
   }
 }
 
@@ -81,50 +73,41 @@ static void poly_qshow_uniform(poly_qshow pout, const uint8_t seed[SEED_BYTES], 
 void vec_qshow_uniform(coeff_qshow out[PARAM_ARP_SHOW + 6], const uint8_t *buf, const uint32_t domain_separator, const uint32_t counter, size_t buflen) {
   uint8_t output[SHAKE128_RATE * 2];
   keccak_state state;
-  size_t k,cnt,off,bytecnt;
+  size_t k, cnt, off, bytecnt;
   shake128_init(&state);
   shake128_absorb(&state, buf, buflen);
   shake128_absorb(&state, (const uint8_t*)&domain_separator, sizeof(uint32_t));
   shake128_absorb(&state, (const uint8_t*)&counter, sizeof(uint32_t));
   shake128_finalize(&state);
   shake128_squeezeblocks(output, 2, &state);
-  bytecnt = 2*SHAKE128_RATE;
+  bytecnt = 2 * SHAKE128_RATE;
+
+  // 9-byte rejection sampler for qπ₂ = 2^65 - 163 (65-bit modulus)
+  static const uint128 Q    = ((uint128)PARAM_Q_SHOW_HIGH64 << 64)
+                             |  (uint128)PARAM_Q_SHOW_LOW64;
+  static const uint128 MASK = ((uint128)1 << PARAM_Q_SHOW_BITLEN) - 1;
 
   cnt = 0;
   off = 0;
   while (cnt < PARAM_ARP_SHOW + 6) {
-#if PARAM_Q_SHOW_BITLEN > 60
-#error "PARAM_Q_SHOW_BITLEN too big for uniform sampling."
-#else
-    // idea: take 15 bytes, ignore MSBs
-    if (bytecnt < 15) {
+    if (bytecnt < 9) {
       for (k = 0; k < bytecnt; k++) {
-        output[k] = output[off++];
+        output[k] = output[off + k];
       }
       shake128_squeezeblocks(&output[bytecnt], 1, &state);
       off = 0;
       bytecnt += SHAKE128_RATE;
     }
-    uint64_t tmp8byte = output[off] | ((uint64_t)output[off+1] << 8) | ((uint64_t)output[off+2] << 16) | ((uint64_t)output[off+3] << 24) | ((uint64_t)output[off+4] << 32) | ((uint64_t)output[off+5] << 40) | ((uint64_t)output[off+6] << 48) | ((uint64_t)output[off+7] << 56);
-    uint64_t tmp = tmp8byte & ((1UL<<PARAM_Q_SHOW_BITLEN)-1);
-    if (tmp < PARAM_Q_SHOW) {
-      out[cnt++] = tmp;
+    uint128 tmp = 0;
+    for (k = 0; k < 9; k++) {
+      tmp |= ((uint128)output[off + k]) << (8 * k);
     }
-    if (cnt >= PARAM_ARP_SHOW + 6) {
-      break;
+    tmp &= MASK;
+    if (tmp < Q) {
+      out[cnt++] = (coeff_qshow)tmp;
     }
-    tmp8byte >>= 60;
-    tmp8byte |= (output[off+8] | ((uint64_t)output[off+9] << 8) | ((uint64_t)output[off+10] << 16) | ((uint64_t)output[off+11] << 24) | ((uint64_t)output[off+12] << 32) | ((uint64_t)output[off+13] << 40) | ((uint64_t)output[off+14] << 48)) << 4;
-    tmp = tmp8byte & ((1UL<<PARAM_Q_SHOW_BITLEN)-1);
-    if (tmp < PARAM_Q_SHOW) {
-      out[cnt++] = tmp;
-    }
-    off += 15;
-    bytecnt -= 15;
-#if PARAM_Q_SHOW_BITLEN < 58
-#warning "PARAM_Q_SHOW_BITLEN maybe unsuitable for efficient uniform sampling."
-#endif
-#endif
+    off += 9;
+    bytecnt -= 9;
   }
 }
 

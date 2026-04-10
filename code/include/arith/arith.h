@@ -33,8 +33,8 @@ void poly_qiss_subring_embed_vec_k(poly_qiss_vec_k res, const poly_q arg, const 
 void poly_qiss_subring_embed_mat_k_k(poly_qiss_mat_k_k res, const poly_q arg, const int64_t fac);
 uint64_t challenge_size_iss(const poly_qiss c);
 
-void poly_qshow_subring_embed_vec_k(poly_qshow_vec_k res, const poly_q arg, const int64_t fac);
-void poly_qshow_subring_embed_mat_k_k(poly_qshow_mat_k_k res, const poly_q arg, const int64_t fac);
+void poly_qshow_subring_embed_vec_k(poly_qshow_vec_k res, const poly_q arg, const coeff_qshow fac);
+void poly_qshow_subring_embed_mat_k_k(poly_qshow_mat_k_k res, const poly_q arg, const coeff_qshow fac);
 uint64_t challenge_size_show(const poly_qshow c);
 
 #endif /* ARITH_H */

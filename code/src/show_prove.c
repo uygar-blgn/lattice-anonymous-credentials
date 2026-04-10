@@ -150,8 +150,8 @@ static int show_user_prove_round2(
     const poly_qshow_vec_256_l y3_g)
 {
   size_t i, j, k;
-  int64_t tmp;
-  uint64_t sq_norm_y3 = 0, sq_norm_z3 = 0;
+  int128 tmp;   // wider: accumulates int128*int128 products; max |tmp| ~ n*m1*rho*sigma1 ~ 2.3e12 < 2^42
+  uint128 sq_norm_y3 = 0, sq_norm_z3 = 0;  // wider: sigma3 ~ 1.4e9 so 256*sigma3^2 ~ 5e20 > uint64_max
   uint8_t challenge_seed[SEED_BYTES];
   coeff_qshow tmp_coeff;
 
@@ -163,19 +163,19 @@ static int show_user_prove_round2(
     {
       for (k = 0; k < PARAM_N_SHOW; k++)
       {
-        tmp += poly_qshow_get_coeff_centered(chal_1[i]->entries[j], k) * poly_qshow_get_coeff_centered(s1->entries[j], k);
+        tmp += (int128)poly_qshow_get_coeff_centered(chal_1[i]->entries[j], k) * (int128)poly_qshow_get_coeff_centered(s1->entries[j], k);
       }
     }
     tmp_coeff = poly_qshow_get_coeff_centered(y3_g->entries[i / PARAM_N_SHOW], i % PARAM_N_SHOW);
-    tmp += tmp_coeff;
-    CHK_UI_OVF_ADDITION(sq_norm_y3, tmp_coeff * tmp_coeff);
-    CHK_UI_OVF_ADDITION(sq_norm_z3, tmp * tmp);
-    proof->z3[i] = tmp;
+    tmp += (int128)tmp_coeff;
+    sq_norm_y3 += (uint128)((int128)tmp_coeff * (int128)tmp_coeff);
+    sq_norm_z3 += (uint128)((int128)tmp * (int128)tmp);
+    proof->z3[i] = (coeff_qshow)tmp;
   }
 
   // rejection sampling
   // sample u3 uniform in (0,1), goto reject if u3 > exp(pi * (sq_norm_y3 - sq_norm_z3) / PARAM_S3SQ_SHOW) / PARAM_REJ3_SHOW
-  if (_reject_exp(exp(M_PI * (double)(sq_norm_y3 - sq_norm_z3) / (double)PARAM_S3SQ_SHOW) / (double)PARAM_REJ3_SHOW))
+  if (_reject_exp(exp(M_PI * (double)(int128)(sq_norm_y3 - sq_norm_z3) / (double)PARAM_S3SQ_SHOW) / (double)PARAM_REJ3_SHOW))
   {
     return 0;
   }
@@ -367,7 +367,7 @@ static void show_user_prove_round4(
 {
   size_t i, j, k, i_k_quot, i_k_rem;
   uint32_t kappa_c;
-  int64_t bexpi;
+  coeff_qshow bexpi;  // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
   uint8_t challenge_seed[SEED_BYTES];
   poly_qshow tmp_poly, e0, e1, y1i_star, y1s_y1, y1s_s1, y1s_one, t0, sum_mu_gamma[6];
   poly_qshow_vec_256_l tmp_vec_256_l;
@@ -537,14 +537,14 @@ static void show_user_prove_round4(
     {
       poly_qshow_zero(Gy1_v2[i]->entries[j]);
       poly_qshow_zero(Gs1_v2[i]->entries[j]);
-      bexpi = (int64_t)PARAM_Q1_SHOW * PARAM_QL;
+      bexpi = (coeff_qshow)PARAM_Q1_SHOW * (coeff_qshow)PARAM_QL;
       for (k = 0; k < PARAM_KH; k++)
       {
         poly_qshow_mul_scalar(tmp_poly, y1->entries[IDX_V2_SHOW + k * PARAM_D * PARAM_K_SHOW + i * PARAM_K_SHOW + j], bexpi);
         poly_qshow_add(Gy1_v2[i]->entries[j], Gy1_v2[i]->entries[j], tmp_poly);
         poly_qshow_mul_scalar(tmp_poly, s1->entries[IDX_V2_SHOW + k * PARAM_D * PARAM_K_SHOW + i * PARAM_K_SHOW + j], bexpi);
         poly_qshow_add(Gs1_v2[i]->entries[j], Gs1_v2[i]->entries[j], tmp_poly);
-        bexpi *= PARAM_BH;
+        bexpi *= (coeff_qshow)PARAM_BH;
       }
     }
   }
@@ -577,7 +577,7 @@ static void show_user_prove_round4(
     i_k_quot = i / PARAM_K_SHOW;
     i_k_rem = i % PARAM_K_SHOW;
     // y1s_y1 used as temp variable to host ([A|-B|A3|-Ds|-D].[y1_v1|y1_v2|y1_v3|y1_s|y1_m])_i
-    poly_qshow_mul_scalar(y1s_y1, y1->entries[IDX_V1_SHOW + i], PARAM_Q1_SHOW);
+    poly_qshow_mul_scalar(y1s_y1, y1->entries[IDX_V1_SHOW + i], (coeff_qshow)PARAM_Q1_SHOW);
     for (j = 0; j < PARAM_D * PARAM_K_SHOW; j++)
     {
       poly_qshow_mul(tmp_poly, A_embed[i_k_quot][j / PARAM_K_SHOW]->rows[i_k_rem]->entries[j % PARAM_K_SHOW], y1->entries[IDX_V12_SHOW + j]);
@@ -669,7 +669,7 @@ static int show_user_prove_round5(
     const poly_qshow_vec_m1 y1,
     const poly_qshow_vec_m2 y2)
 {
-  uint64_t sq_norm_y1, sq_norm_z1, sq_norm_y2, sq_norm_z2;
+  uint128 sq_norm_y1, sq_norm_z1, sq_norm_y2, sq_norm_z2;  // uint128: poly_*_norm2 returns uint128
 
   // computing z1 = y1 + c.s1, z2 = y2 + c.s2 (and square norms)
   poly_qshow_vec_m1_mul_poly_qshow(proof->z1, s1, proof->c);
@@ -686,9 +686,9 @@ static int show_user_prove_round5(
   // sample u1 uniform in (0,1), goto reject if u1 > exp(pi * (sq_norm_y1 - sq_norm_z1) / PARAM_S1SQ_SHOW) / PARAM_REJ1_SHOW
   // sample u2 uniform in (0,1), goto reject if u2 > exp(pi * (sq_norm_y2 - sq_norm_z2) / PARAM_S2SQ_SHOW) / PARAM_REJ2_SHOW
   if (_reject_exp(
-          exp(M_PI * (double)(sq_norm_y1 - sq_norm_z1) / (double)PARAM_S1SQ_SHOW) / (double)PARAM_REJ1_SHOW) ||
+          exp(M_PI * (double)(int128)(sq_norm_y1 - sq_norm_z1) / (double)PARAM_S1SQ_SHOW) / (double)PARAM_REJ1_SHOW) ||
       _reject_exp(
-          exp(M_PI * (double)(sq_norm_y2 - sq_norm_z2) / (double)PARAM_S2SQ_SHOW) / (double)PARAM_REJ2_SHOW))
+          exp(M_PI * (double)(int128)(sq_norm_y2 - sq_norm_z2) / (double)PARAM_S2SQ_SHOW) / (double)PARAM_REJ2_SHOW))
   {
     return 0;
   }

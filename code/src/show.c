@@ -153,16 +153,16 @@ void show_user_embed(
     norm2sq_v2 += poly_q_vec_d_norm2(sig->v2[i]);
   }
   norm2sq_v3 = poly_q_sq_norm2(sig->v3);
-  // B11^2 - |v11|^2
-  assert(norm2sq_v11 <= PARAM_B11SQ);
-  four_squares(four_squares_res, PARAM_B11SQ - norm2sq_v11);
+  // B'_{1,1}^2 - |v'_{1,1}|^2  (proof bound; B'_{1,1} = B_{1,1} + sqrt(nd))
+  assert(norm2sq_v11 <= PARAM_B11_PRIME_SQ);
+  four_squares(four_squares_res, PARAM_B11_PRIME_SQ - norm2sq_v11);
   for (i = 0; i < 4; i++)
   {
     poly_qshow_set_coeff(s1->entries[IDX_V11_FS], i, (coeff_qshow)(four_squares_res[i]));
   }
-  // B12^2 - |v12|^2
-  assert(norm2sq_v12 <= PARAM_B12SQ);
-  four_squares(four_squares_res, PARAM_B12SQ - norm2sq_v12);
+  // B'_{1,2}^2 - |v'_{1,2}|^2  (proof bound; B'_{1,2} = B_{1,2} + sqrt(nd))
+  assert(norm2sq_v12 <= PARAM_B12_PRIME_SQ);
+  four_squares(four_squares_res, PARAM_B12_PRIME_SQ - norm2sq_v12);
   for (i = 0; i < 4; i++)
   {
     poly_qshow_set_coeff(s1->entries[IDX_V12_FS], i, (coeff_qshow)(four_squares_res[i]));

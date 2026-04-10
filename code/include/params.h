@@ -179,20 +179,25 @@
 #define PARAM_N_SHOW 64
 // Ring degree gap between the issuance proof and the signature (subring embedding)
 #define PARAM_K_SHOW 4
-// Modulus for the issuance proof
-#define PARAM_Q_SHOW 234086575306343681L
-// Modulus bit-length upper bound for uniform sampling
-#define PARAM_Q_SHOW_BITLEN 58
-// Modulus factor for the show proof
-#define PARAM_Q1_SHOW 549755813881L
-// Modulus bit-length upper bound for uniform sampling mod q_1
-#define PARAM_Q1_SHOW_BITLEN 40
-// Second modulus factor for the issuance proof
+// Modulus for the show proof: qπ₂ = 2^65 - 163 (exceeds 64-bit range; stored in two halves)
+// Low 64 bits of qπ₂ = 2^64 - 163
+#define PARAM_Q_SHOW_LOW64 18446744073709551453UL
+// High 64 bits of qπ₂ (= 1, since qπ₂ = 1*2^64 + (2^64-163))
+#define PARAM_Q_SHOW_HIGH64 1UL
+// Decimal string for fmpz_set_str in arith_qshow_setup
+#define PARAM_Q_SHOW_STR "36893488147419103069"
+// Modulus bit-length upper bound for uniform sampling (65 bits)
+#define PARAM_Q_SHOW_BITLEN 65
+// Modulus factor for the show proof: q₁ = floor(qπ₂ / q) = floor(36893488147419103069 / 405769)
+#define PARAM_Q1_SHOW 90922392167511LL
+// Modulus bit-length upper bound for uniform sampling mod q_1 (47 bits)
+#define PARAM_Q1_SHOW_BITLEN 47
+// Second modulus factor for the show proof
 #define PARAM_Q2_SHOW PARAM_Q
-// Inverse of q_1 modulo q_2
-#define PARAM_Q1_INVMOD_Q2_SHOW 99299L
-// Inverse of q_2 modulo q_1
-#define PARAM_Q2_INVMOD_Q1_SHOW 421549908863L
+// Inverse of q_1 modulo q_2: q₁⁻¹ mod q
+#define PARAM_Q1_INVMOD_Q2_SHOW 363290L
+// Inverse of q_2 modulo q_1: q⁻¹ mod q₁
+#define PARAM_Q2_INVMOD_Q1_SHOW 9518450884330LL
 // Module rank for the show proof
 #define PARAM_D_SHOW 20
 // Witness dimension
@@ -207,36 +212,48 @@
 #define PARAM_ARP_DIV_N_SHOW 4
 // 256 / n + l
 #define PARAM_ARP_DIV_N_L_SHOW 5
-// Gaussian mask width for cs_1
-#define PARAM_S1_SHOW 582380223.29294335842132568359
-// Squared Gaussian mask width for cs_1
-#define PARAM_S1SQ_SHOW 339166724482738560.00000000000000000000
-// Gaussian mask width for cs_2
-#define PARAM_S2_SHOW 311304.54102290823357179761
-// Squared Gaussian mask width for cs_2
-#define PARAM_S2SQ_SHOW 96910517261.48355102539062500000
-// Gaussian mask width for Rs_1 (ARP)
-#define PARAM_S3_SHOW 114957846.73890274763107299805
-// Squared Gaussian mask width for Rs_1 (ARP)
-#define PARAM_S3SQ_SHOW 13215306526845054.00000000000000000000
+// Gaussian mask width σ₁ for cs_1 (Table C.3)
+#define PARAM_S1_SHOW 29907260.15800000190734863281
+// Squared Gaussian mask width σ₁² for cs_1
+#define PARAM_S1SQ_SHOW 894443992211544.87500000000000000000
+// Gaussian mask width σ₂ for cs_2 (Table C.3)
+#define PARAM_S2_SHOW 13440.06600000000022737367
+// Squared Gaussian mask width σ₂² for cs_2
+#define PARAM_S2SQ_SHOW 180635374.08404800295829772949
+// Gaussian mask width σ₃ for Rs_1 ARP (Table C.3)
+#define PARAM_S3_SHOW 1417550244.79400014877319335938
+// Squared Gaussian mask width σ₃² for Rs_1 ARP
+#define PARAM_S3SQ_SHOW 2009448521065028608.00000000000000000000
 // Rejection sampling rate for y_1
 #define PARAM_REJ1_SHOW 2
 // Rejection sampling rate for y_2
 #define PARAM_REJ2_SHOW 2
 // Rejection sampling rate for y_3
 #define PARAM_REJ3_SHOW 2
-// Squared verification bound for z_1 (high bits)
+// Compression parameter γ (mask commitment), Table C.3
+#define PARAM_GAMMA_SHOW 1129442642L
+// Compression parameter D (witness commitment), Table C.3
+// Note: distinct from PARAM_D_SHOW (module rank = 20)
+#define PARAM_D_COM_SHOW 22
+// Squared verification bound for z_1 (low 64 bits)
+// TODO(Phase 8): recompute from Python script with new σ₁; estimated HIGH64 = 0
 #define PARAM_B1SQ_SHOW_LOW64 6567424658286313472UL
-// Squared verification bound for z_1 (low bits)
+// Squared verification bound for z_1 (high 64 bits)
 #define PARAM_B1SQ_SHOW_HIGH64 46UL
 // Squared verification bound for z_2
+// TODO(Phase 8): recompute from Python script with new σ₂
 #define PARAM_B2SQ_SHOW 95184984511325UL
 // Squared verification bound for z_3
+// TODO(Phase 8): recompute from Python script with new σ₃
 #define PARAM_B3SQ_SHOW 1456048615171063808UL
 // Infinity norm of challenges
 #define PARAM_RHO_SHOW 8
 // Manhattan-like norm of challenges
 #define PARAM_ETA_SHOW 93
+// Proof bound B'_{1,1}² = (B_{1,1} + sqrt(nd))² = (134719.51 + 32)² (Show protocol, §A.3)
+#define PARAM_B11_PRIME_SQ ((int64_t)18157969448LL)
+// Proof bound B'_{1,2}² = (B_{1,2} + sqrt(nd))² = (68207.66 + 32)² (Show protocol, §A.3)
+#define PARAM_B12_PRIME_SQ ((int64_t)4656651197LL)
 
 /*************************************************
  * Testing

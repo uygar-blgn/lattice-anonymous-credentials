@@ -172,10 +172,10 @@ target_compile_options(bench PUBLIC ${WARN_ERROR_FLAGS} ${BENCH_OPTS})
 target_link_options(bench PUBLIC ${BENCH_OPTS})
 
 target_link_libraries(test PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
-target_link_libraries(test PUBLIC m)
+target_link_libraries(test PUBLIC gmp m)
 
 target_link_libraries(bench PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
-target_link_libraries(bench PUBLIC m)
+target_link_libraries(bench PUBLIC gmp m)
 
 target_sources(sep_test PUBLIC
   "${TEST_DIR}/sep_main.c"
@@ -184,4 +184,4 @@ target_include_directories(sep_test PUBLIC ${INCLUDE_DIR})
 target_compile_options(sep_test PUBLIC ${WARN_ERROR_FLAGS} ${TEST_OPTS} ${SANITIZER_FLAGS})
 target_link_options(sep_test PUBLIC ${TEST_OPTS} ${SANITIZER_FLAGS})
 target_link_libraries(sep_test PUBLIC "${CMAKE_SOURCE_DIR}/libs/flint/libflint.so")
-target_link_libraries(sep_test PUBLIC m)
+target_link_libraries(sep_test PUBLIC gmp m)

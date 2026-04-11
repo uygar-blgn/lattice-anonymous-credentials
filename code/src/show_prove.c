@@ -150,8 +150,8 @@ static int show_user_prove_round2(
     const poly_qshow_vec_256_l y3_g)
 {
   size_t i, j, k;
-  int128 tmp;   // wider: accumulates int128*int128 products; max |tmp| ~ n*m1*rho*sigma1 ~ 2.3e12 < 2^42
-  uint128 sq_norm_y3 = 0, sq_norm_z3 = 0;  // wider: sigma3 ~ 1.4e9 so 256*sigma3^2 ~ 5e20 > uint64_max
+  int128 tmp;                             // wider: accumulates int128*int128 products; max |tmp| ~ n*m1*rho*sigma1 ~ 2.3e12 < 2^42
+  uint128 sq_norm_y3 = 0, sq_norm_z3 = 0; // wider: sigma3 ~ 1.4e9 so 256*sigma3^2 ~ 5e20 > uint64_max
   uint8_t challenge_seed[SEED_BYTES];
   coeff_qshow tmp_coeff;
 
@@ -367,7 +367,7 @@ static void show_user_prove_round4(
 {
   size_t i, j, k, i_k_quot, i_k_rem;
   uint32_t kappa_c;
-  coeff_qshow bexpi;  // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
+  coeff_qshow bexpi; // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
   uint8_t challenge_seed[SEED_BYTES];
   poly_qshow tmp_poly, e0, e1, y1i_star, y1s_y1, y1s_s1, y1s_one, t0, sum_mu_gamma[6];
   poly_qshow_vec_256_l tmp_vec_256_l;
@@ -669,7 +669,7 @@ static int show_user_prove_round5(
     const poly_qshow_vec_m1 y1,
     const poly_qshow_vec_m2 y2)
 {
-  uint128 sq_norm_y1, sq_norm_z1, sq_norm_y2, sq_norm_z2;  // uint128: poly_*_norm2 returns uint128
+  uint128 sq_norm_y1, sq_norm_z1, sq_norm_y2, sq_norm_z2; // uint128: poly_*_norm2 returns uint128
 
   // computing z1 = y1 + c.s1, z2 = y2 + c.s2 (and square norms)
   poly_qshow_vec_m1_mul_poly_qshow(proof->z1, s1, proof->c);
@@ -811,7 +811,7 @@ void show_user_prove(
     poly_qshow_mul(tmp_poly, s1i_star, s1->entries[i]);
     poly_qshow_add(quadratic_precomp[0], quadratic_precomp[0], tmp_poly);
   }
-  poly_qshow_muladd_constant(quadratic_precomp[0], -(PARAM_B11SQ + PARAM_B12SQ), 1);
+  poly_qshow_muladd_constant(quadratic_precomp[0], -(PARAM_B11_PRIME_SQ + PARAM_B12_PRIME_SQ), 1);
 
   // <v2"*,v2"> - B_2^2
   for (i = IDX_V2_SHOW; i < IDX_V3_SHOW; i++)

@@ -235,17 +235,18 @@
 // Compression parameter D (witness commitment), Table C.3
 // Note: distinct from PARAM_D_SHOW (module rank = 20)
 #define PARAM_D_COM_SHOW 22
-// Squared verification bound for z_1 (low 64 bits)
-// TODO(Phase 8): recompute from Python script with new σ₁; estimated HIGH64 = 0
-#define PARAM_B1SQ_SHOW_LOW64 6567424658286313472UL
-// Squared verification bound for z_1 (high 64 bits)
-#define PARAM_B1SQ_SHOW_HIGH64 46UL
-// Squared verification bound for z_2
-// TODO(Phase 8): recompute from Python script with new σ₂
-#define PARAM_B2SQ_SHOW 95184984511325UL
-// Squared verification bound for z_3
-// TODO(Phase 8): recompute from Python script with new σ₃
-#define PARAM_B3SQ_SHOW 1456048615171063808UL
+// Squared verification bound for z_1 (= REJ1² · 2 · m1 · n · σ₁²; t = 128·ln2, chi-sq tail)
+// B1SQ = 10333582971951253504 (fits in uint64, HIGH64 = 0)
+#define PARAM_B1SQ_SHOW_LOW64 10333582971951253504UL
+// Squared verification bound for z_1 (high 64 bits) — zero since B1SQ < 2^64
+#define PARAM_B1SQ_SHOW_HIGH64 0UL
+// Squared verification bound for z_2 (= REJ2² · 2 · m2 · n · σ₂²)
+// B2SQ = 1095417987986
+#define PARAM_B2SQ_SHOW 1095417987986UL
+// Squared verification bound for z_3 (= REJ3² · 2 · ARP · σ₃²)
+// B3SQ = 1476668782078250450944 > 2^64; split into HIGH64=80, LOW64=929256181486321664
+#define PARAM_B3SQ_SHOW_LOW64 929256181486321664UL
+#define PARAM_B3SQ_SHOW_HIGH64 80UL
 // Infinity norm of challenges
 #define PARAM_RHO_SHOW 8
 // Manhattan-like norm of challenges

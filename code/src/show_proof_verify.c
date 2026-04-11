@@ -39,9 +39,9 @@ int show_verify(
   size_t i, j, k, i_k_quot, i_k_rem;
   int is_valid = 1;
   uint8_t buf[CHAL4_SHOW_INPUT_BYTES] = {0}, challenge_seed[SEED_BYTES];
-  uint128 sq_norm_z3, sq_norm_z2;  // wider: z3 coeff^2 can exceed uint64 with new sigma3
+  uint128 sq_norm_z3, sq_norm_z2; // wider: z3 coeff^2 can exceed uint64 with new sigma3
   uint128 sq_norm_z1;
-  coeff_qshow bexpi;  // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
+  coeff_qshow bexpi; // holds q₁·q_L·b_H^k; int128 avoids overflow with 65-bit q₁
   coeff_qshow chal_2[PARAM_L_SHOW][PARAM_ARP_SHOW + 6];
   coeff_qshow tmp_coeff;
   poly_qshow tmp_poly, z1s_z1, z1s_c_one, sum_mu_gamma[7], t0, c, c_one;
@@ -431,7 +431,9 @@ int show_verify(
     sq_norm_z3 += (uint128)((int128)tmp_coeff * (int128)tmp_coeff);
   }
   is_valid = is_valid && (sq_norm_z1 <= ((uint128)PARAM_B1SQ_SHOW_LOW64 + (((uint128)PARAM_B1SQ_SHOW_HIGH64) << 64)));
-  is_valid = is_valid && (sq_norm_z2 <= (uint128)PARAM_B2SQ_SHOW) && (sq_norm_z3 <= (uint128)PARAM_B3SQ_SHOW) && poly_qshow_equal(proof->c, c);
+  is_valid = is_valid && (sq_norm_z2 <= (uint128)PARAM_B2SQ_SHOW) &&
+             (sq_norm_z3 <= ((uint128)PARAM_B3SQ_SHOW_LOW64 + (((uint128)PARAM_B3SQ_SHOW_HIGH64) << 64))) &&
+             poly_qshow_equal(proof->c, c);
 
   // clean up
 show_verify_cleanup:

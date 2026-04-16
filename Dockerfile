@@ -12,8 +12,8 @@ RUN apt-get install -y gcc g++ m4 autoconf autotools-dev make libtool cmake xz-u
 
 # download and unpack GMP and MPFR
 WORKDIR /home/lac/libs
-ADD https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz /home/lac/libs/gmp.tar.xz
-ADD https://www.mpfr.org/mpfr-current/mpfr-4.2.1.tar.xz /home/lac/libs/mpfr.tar.xz
+ADD https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz /home/lac/libs/gmp.tar.xz
+ADD https://www.mpfr.org/mpfr-current/mpfr-4.2.2.tar.xz /home/lac/libs/mpfr.tar.xz
 RUN tar -xf gmp.tar.xz
 RUN tar -xf mpfr.tar.xz
 

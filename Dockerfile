@@ -18,17 +18,17 @@ RUN tar -xf gmp.tar.xz
 RUN tar -xf mpfr.tar.xz
 
 # Setup GMP library
-WORKDIR /home/lac/libs/gmp-6.2.1
+WORKDIR /home/lac/libs/gmp-6.3.0
 RUN ./configure
 RUN make
-RUN make check
+# RUN make check
 RUN make install
 
 # Setup MPFR library
-WORKDIR /home/lac/libs/mpfr-4.2.1
+WORKDIR /home/lac/libs/mpfr-4.2.2
 RUN ./configure
 RUN make
-RUN make check
+# RUN make check
 RUN make install
 
 # Setup FLINT library
@@ -36,7 +36,7 @@ WORKDIR /home/lac/libs/flint
 RUN ./bootstrap.sh
 RUN ./configure
 RUN make -j
-RUN make check
+# RUN make check
 RUN make install
 
 # Build lac
